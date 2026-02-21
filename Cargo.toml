@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["pake-core", "pake-cpace", "pake-tests"]
+members = ["pake-core", "pake-cpace", "pake-opaque", "pake-tests"]
 
 [workspace.package]
 version = "0.1.0"
@@ -18,3 +18,8 @@ zeroize = { version = "1.8", features = ["derive"] }
 subtle = "2.6"
 sha2 = "0.10"
 curve25519-dalek = { version = "4.1", features = ["group"] }
+voprf = { version = "0.5", features = ["ristretto255", "ristretto255-ciphersuite"] }
+hkdf = "0.12"
+hmac = "0.12"
+argon2 = { version = "0.5", default-features = false, features = ["alloc"] }
+generic-array = "0.14"

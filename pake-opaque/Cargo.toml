@@ -1,0 +1,29 @@
+[package]
+name = "pake-opaque"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "OPAQUE augmented PAKE protocol (RFC 9807)"
+
+[features]
+default = ["std", "ristretto255"]
+std = ["alloc", "pake-core/std"]
+alloc = ["pake-core/alloc"]
+ristretto255 = ["dep:curve25519-dalek", "dep:sha2", "dep:voprf"]
+argon2 = ["dep:argon2"]
+
+[dependencies]
+pake-core = { path = "../pake-core", default-features = false, features = ["alloc"] }
+digest = { workspace = true }
+rand_core = { workspace = true }
+zeroize = { workspace = true }
+subtle = { workspace = true }
+hkdf = { workspace = true }
+hmac = { workspace = true }
+generic-array = { workspace = true }
+curve25519-dalek = { workspace = true, optional = true }
+sha2 = { workspace = true, optional = true }
+voprf = { workspace = true, optional = true }
+argon2 = { workspace = true, optional = true }
