@@ -16,6 +16,7 @@ pake-core = { path = "../pake-core" }
 pake-cpace = { path = "../pake-cpace" }
 pake-opaque = { path = "../pake-opaque" }
 pake-spake2 = { path = "../pake-spake2" }
+pake-spake2plus = { path = "../pake-spake2plus" }
 pake-crypto = { path = "../pake-crypto" }
 hex = "0.4"
 serde = { version = "1", features = ["derive"] }
