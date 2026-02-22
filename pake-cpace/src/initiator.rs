@@ -1,7 +1,6 @@
 //! CPace initiator state machine.
 
 use alloc::vec::Vec;
-use group::{Group, GroupEncoding};
 use rand_core::CryptoRngCore;
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
@@ -9,6 +8,7 @@ use crate::ciphersuite::CpaceCiphersuite;
 use crate::error::CpaceError;
 use crate::generator::calculate_generator;
 use crate::transcript::{derive_isk, derive_session_id, CpaceMode};
+use pake_core::crypto::CpaceGroup;
 use pake_core::SharedSecret;
 
 /// Output of a completed CPace protocol run.
@@ -22,8 +22,7 @@ pub struct CpaceOutput {
 /// State held by the initiator between sending its share and receiving the responder's share.
 #[derive(Zeroize, ZeroizeOnDrop)]
 pub struct InitiatorState<C: CpaceCiphersuite> {
-    #[zeroize(skip)]
-    scalar: <C::Group as Group>::Scalar,
+    scalar: <C::Group as CpaceGroup>::Scalar,
     ya_bytes: Vec<u8>,
     ad_a: Vec<u8>,
     sid: Vec<u8>,
@@ -45,10 +44,10 @@ impl<C: CpaceCiphersuite> CpaceInitiator<C> {
         ad_initiator: &[u8],
         rng: &mut impl CryptoRngCore,
     ) -> Result<(Vec<u8>, InitiatorState<C>), CpaceError> {
-        let g = calculate_generator::<C>(password, ci, sid);
-        let ya = C::sample_scalar(rng);
-        let ya_point = g * ya;
-        let ya_bytes = ya_point.to_bytes().as_ref().to_vec();
+        let g = calculate_generator::<C>(password, ci, sid)?;
+        let ya = C::Group::random_scalar(rng);
+        let ya_point = g.scalar_mul(&ya);
+        let ya_bytes = ya_point.to_bytes();
 
         let state = InitiatorState {
             scalar: ya,
@@ -73,31 +72,22 @@ impl<C: CpaceCiphersuite> InitiatorState<C> {
         mode: CpaceMode,
     ) -> Result<CpaceOutput, CpaceError> {
         // Decode Yb
-        let repr = <C::Group as GroupEncoding>::Repr::default();
-        let mut repr = repr;
-        let repr_slice = repr.as_mut();
-        if responder_share.len() != repr_slice.len() {
-            return Err(CpaceError::InvalidPoint);
-        }
-        repr_slice.copy_from_slice(responder_share);
-
-        let yb: C::Group =
-            Option::from(C::Group::from_bytes(&repr)).ok_or(CpaceError::InvalidPoint)?;
+        let yb = C::Group::from_bytes(responder_share).map_err(|_| CpaceError::InvalidPoint)?;
 
         // Check Yb != identity
-        if bool::from(yb.is_identity()) {
+        if yb.is_identity() {
             return Err(CpaceError::IdentityPoint);
         }
 
         // K = ya * Yb
-        let k = yb * self.scalar;
+        let k = yb.scalar_mul(&self.scalar);
 
         // Check K != identity
-        if bool::from(k.is_identity()) {
+        if k.is_identity() {
             return Err(CpaceError::IdentityPoint);
         }
 
-        let k_bytes = k.to_bytes().as_ref().to_vec();
+        let k_bytes = k.to_bytes();
 
         // Derive ISK
         let isk = derive_isk::<C>(

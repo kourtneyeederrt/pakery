@@ -1,13 +1,24 @@
 //! Test vectors from draft-irtf-cfrg-cpace-18 for Ristretto255 + SHA-512
 //! (G_Coffee25519 in testvectors.json).
 
-use curve25519_dalek::{RistrettoPoint, Scalar};
-use group::{Group, GroupEncoding};
 use pake_core::encoding::{leb128_encode, lv_cat, o_cat, prepend_len};
-use pake_cpace::ciphersuite::Ristretto255Sha512;
 use pake_cpace::generator::{calculate_generator, generator_string};
 use pake_cpace::transcript::{derive_isk, derive_session_id, CpaceMode};
-use pake_cpace::{CpaceRistretto255Initiator, CpaceRistretto255Responder};
+use pake_cpace::{CpaceInitiator, CpaceResponder};
+
+use pake_crypto::{Ristretto255Group, Sha512Hash};
+
+/// CPace ciphersuite: Ristretto255 + SHA-512.
+struct CpaceRistretto255Sha512;
+
+impl pake_cpace::CpaceCiphersuite for CpaceRistretto255Sha512 {
+    type Group = Ristretto255Group;
+    type Hash = Sha512Hash;
+
+    const DSI: &'static [u8] = b"CPaceRistretto255";
+    const HASH_BLOCK_SIZE: usize = 128;
+    const FIELD_SIZE_BYTES: usize = 32;
+}
 
 fn h(hex_str: &str) -> Vec<u8> {
     hex::decode(hex_str).expect("valid hex")
@@ -33,19 +44,6 @@ const SID_OUTPUT_OC_HEX: &str = "CA4B50700C46203CCD10BC0E9F31095E508189CB5985753
 // Invalid points (G_Coffee25519_points)
 const INVALID_Y1_HEX: &str = "2B3C6B8C4F3800E7AEF6864025B4ED79BD599117E427C41BD47D93D654B4A51C";
 const INVALID_Y2_HEX: &str = "0000000000000000000000000000000000000000000000000000000000000000";
-
-fn decode_scalar(hex_str: &str) -> Scalar {
-    let bytes = h(hex_str);
-    let arr: [u8; 32] = bytes.try_into().expect("32 bytes");
-    Scalar::from_canonical_bytes(arr).expect("valid canonical scalar")
-}
-
-fn decode_point(hex_str: &str) -> RistrettoPoint {
-    let bytes = h(hex_str);
-    let arr: [u8; 32] = bytes.try_into().expect("32 bytes");
-    let ct = RistrettoPoint::from_bytes(&arr.into());
-    Option::from(ct).expect("valid point")
-}
 
 // --- Encoding tests ---
 
@@ -106,16 +104,8 @@ fn test_generator_string() {
     let ci = h(CI_HEX);
     let sid = h(SID_HEX);
 
-    let gen_str = generator_string::<Ristretto255Sha512>(&prs, &ci, &sid);
+    let gen_str = generator_string::<CpaceRistretto255Sha512>(&prs, &ci, &sid);
 
-    // Expected length calculation:
-    // DSI = "CPaceRistretto255" (17 bytes), prepend_len(DSI) = 1 + 17 = 18
-    // PRS = "Password" (8 bytes), prepend_len(PRS) = 1 + 8 = 9
-    // len_zpad = max(0, 128 - 1 - 9 - 18) = 100
-    // prepend_len(zpad of 100) = 1 + 100 = 101
-    // CI = 26 bytes, prepend_len(CI) = 1 + 26 = 27
-    // sid = 16 bytes, prepend_len(sid) = 1 + 16 = 17
-    // Total = 18 + 9 + 101 + 27 + 17 = 172
     assert_eq!(gen_str.len(), 172, "generator string should be 172 bytes");
 }
 
@@ -126,11 +116,11 @@ fn test_calculate_generator() {
     let sid = h(SID_HEX);
     let expected_g = h(G_HEX);
 
-    let g = calculate_generator::<Ristretto255Sha512>(&prs, &ci, &sid);
-    let g_bytes = g.to_bytes();
+    let g = calculate_generator::<CpaceRistretto255Sha512>(&prs, &ci, &sid).unwrap();
+    let g_bytes = pake_core::crypto::CpaceGroup::to_bytes(&g);
 
     assert_eq!(
-        g_bytes.as_ref(),
+        &g_bytes[..],
         &expected_g[..],
         "generator must match test vector"
     );
@@ -140,16 +130,18 @@ fn test_calculate_generator() {
 
 #[test]
 fn test_ya_computation() {
+    use pake_core::crypto::CpaceGroup;
+
     let prs = h(PRS_HEX);
     let ci = h(CI_HEX);
     let sid = h(SID_HEX);
 
-    let g = calculate_generator::<Ristretto255Sha512>(&prs, &ci, &sid);
+    let g = calculate_generator::<CpaceRistretto255Sha512>(&prs, &ci, &sid).unwrap();
     let ya_scalar = decode_scalar(YA_SCALAR_HEX);
-    let ya_point = g * ya_scalar;
+    let ya_point = g.scalar_mul(&ya_scalar);
 
     assert_eq!(
-        ya_point.to_bytes().as_ref(),
+        &ya_point.to_bytes()[..],
         &h(YA_POINT_HEX)[..],
         "Ya = ya * g must match test vector"
     );
@@ -157,16 +149,18 @@ fn test_ya_computation() {
 
 #[test]
 fn test_yb_computation() {
+    use pake_core::crypto::CpaceGroup;
+
     let prs = h(PRS_HEX);
     let ci = h(CI_HEX);
     let sid = h(SID_HEX);
 
-    let g = calculate_generator::<Ristretto255Sha512>(&prs, &ci, &sid);
+    let g = calculate_generator::<CpaceRistretto255Sha512>(&prs, &ci, &sid).unwrap();
     let yb_scalar = decode_scalar(YB_SCALAR_HEX);
-    let yb_point = g * yb_scalar;
+    let yb_point = g.scalar_mul(&yb_scalar);
 
     assert_eq!(
-        yb_point.to_bytes().as_ref(),
+        &yb_point.to_bytes()[..],
         &h(YB_POINT_HEX)[..],
         "Yb = yb * g must match test vector"
     );
@@ -174,19 +168,27 @@ fn test_yb_computation() {
 
 #[test]
 fn test_shared_secret_k() {
+    use pake_core::crypto::CpaceGroup;
+
     let ya_scalar = decode_scalar(YA_SCALAR_HEX);
     let yb_scalar = decode_scalar(YB_SCALAR_HEX);
-    let ya_point = decode_point(YA_POINT_HEX);
-    let yb_point = decode_point(YB_POINT_HEX);
+    let ya_point = Ristretto255Group::from_bytes(&h(YA_POINT_HEX)).unwrap();
+    let yb_point = Ristretto255Group::from_bytes(&h(YB_POINT_HEX)).unwrap();
     let expected_k = h(K_HEX);
 
     // K = ya * Yb
-    let k1 = yb_point * ya_scalar;
-    assert_eq!(k1.to_bytes().as_ref(), &expected_k[..], "K = ya * Yb");
+    let k1 = yb_point.scalar_mul(&ya_scalar);
+    assert_eq!(&k1.to_bytes()[..], &expected_k[..], "K = ya * Yb");
 
     // K = yb * Ya (commutativity)
-    let k2 = ya_point * yb_scalar;
-    assert_eq!(k2.to_bytes().as_ref(), &expected_k[..], "K = yb * Ya");
+    let k2 = ya_point.scalar_mul(&yb_scalar);
+    assert_eq!(&k2.to_bytes()[..], &expected_k[..], "K = yb * Ya");
+}
+
+fn decode_scalar(hex_str: &str) -> <Ristretto255Group as pake_core::crypto::CpaceGroup>::Scalar {
+    let bytes = h(hex_str);
+    let arr: [u8; 32] = bytes.try_into().expect("32 bytes");
+    curve25519_dalek::Scalar::from_canonical_bytes(arr).expect("valid canonical scalar")
 }
 
 // --- ISK derivation tests ---
@@ -201,7 +203,7 @@ fn test_isk_ir() {
     let ad_b = h(ADB_HEX);
     let expected = h(ISK_IR_HEX);
 
-    let isk = derive_isk::<Ristretto255Sha512>(
+    let isk = derive_isk::<CpaceRistretto255Sha512>(
         &sid,
         &k,
         &ya,
@@ -228,8 +230,15 @@ fn test_isk_sy() {
     let ad_b = h(ADB_HEX);
     let expected = h(ISK_SY_HEX);
 
-    let isk =
-        derive_isk::<Ristretto255Sha512>(&sid, &k, &ya, &ad_a, &yb, &ad_b, CpaceMode::Symmetric);
+    let isk = derive_isk::<CpaceRistretto255Sha512>(
+        &sid,
+        &k,
+        &ya,
+        &ad_a,
+        &yb,
+        &ad_b,
+        CpaceMode::Symmetric,
+    );
 
     assert_eq!(
         isk.as_bytes(),
@@ -248,7 +257,7 @@ fn test_session_id_output_ir() {
     let ad_b = h(ADB_HEX);
     let expected = h(SID_OUTPUT_IR_HEX);
 
-    let sid_out = derive_session_id::<Ristretto255Sha512>(
+    let sid_out = derive_session_id::<CpaceRistretto255Sha512>(
         &ya,
         &ad_a,
         &yb,
@@ -268,7 +277,7 @@ fn test_session_id_output_oc() {
     let expected = h(SID_OUTPUT_OC_HEX);
 
     let sid_out =
-        derive_session_id::<Ristretto255Sha512>(&ya, &ad_a, &yb, &ad_b, CpaceMode::Symmetric);
+        derive_session_id::<CpaceRistretto255Sha512>(&ya, &ad_a, &yb, &ad_b, CpaceMode::Symmetric);
 
     assert_eq!(sid_out, expected, "sid_output_oc must match test vector");
 }
@@ -277,14 +286,15 @@ fn test_session_id_output_oc() {
 
 #[test]
 fn test_invalid_points_rejected() {
+    use pake_core::crypto::CpaceGroup;
+
     let invalid_points = [INVALID_Y1_HEX, INVALID_Y2_HEX];
 
     for (i, hex) in invalid_points.iter().enumerate() {
         let bytes = h(hex);
-        let arr: [u8; 32] = bytes.try_into().expect("32 bytes");
-        let result = Option::<RistrettoPoint>::from(RistrettoPoint::from_bytes(&arr.into()));
+        let result = Ristretto255Group::from_bytes(&bytes);
         assert!(
-            result.is_none() || bool::from(result.unwrap().is_identity()),
+            result.is_err() || result.unwrap().is_identity(),
             "Invalid point Y{} should be rejected or be identity",
             i + 1
         );
@@ -319,12 +329,7 @@ impl rand_core::RngCore for FixedScalarRng {
         unimplemented!()
     }
     fn fill_bytes(&mut self, dest: &mut [u8]) {
-        // curve25519-dalek's Scalar::random reads 64 bytes and reduces mod l.
-        // We need to provide bytes that, when reduced mod l, produce our target scalar.
-        // Since our test scalars are already canonical (< l), we can just
-        // put them in the first 32 bytes and zero the rest.
         if !self.used {
-            // For the first fill, provide the scalar bytes (zero-extended to 64 if needed)
             if dest.len() <= 32 {
                 dest.copy_from_slice(&self.scalar_bytes[..dest.len()]);
             } else {
@@ -359,13 +364,14 @@ fn test_full_protocol_ir() {
     // Initiator start
     let mut rng_a = FixedScalarRng::new(YA_SCALAR_HEX);
     let (ya_bytes, state) =
-        CpaceRistretto255Initiator::start(&prs, &ci, &sid, &ad_a, &mut rng_a).unwrap();
+        CpaceInitiator::<CpaceRistretto255Sha512>::start(&prs, &ci, &sid, &ad_a, &mut rng_a)
+            .unwrap();
 
     assert_eq!(ya_bytes, h(YA_POINT_HEX), "Ya must match test vector");
 
     // Responder
     let mut rng_b = FixedScalarRng::new(YB_SCALAR_HEX);
-    let (yb_bytes, resp_output) = CpaceRistretto255Responder::respond(
+    let (yb_bytes, resp_output) = CpaceResponder::<CpaceRistretto255Sha512>::respond(
         &ya_bytes,
         &prs,
         &ci,
@@ -419,11 +425,12 @@ fn test_full_protocol_symmetric() {
     // Initiator start
     let mut rng_a = FixedScalarRng::new(YA_SCALAR_HEX);
     let (ya_bytes, state) =
-        CpaceRistretto255Initiator::start(&prs, &ci, &sid, &ad_a, &mut rng_a).unwrap();
+        CpaceInitiator::<CpaceRistretto255Sha512>::start(&prs, &ci, &sid, &ad_a, &mut rng_a)
+            .unwrap();
 
     // Responder
     let mut rng_b = FixedScalarRng::new(YB_SCALAR_HEX);
-    let (yb_bytes, resp_output) = CpaceRistretto255Responder::respond(
+    let (_, resp_output) = CpaceResponder::<CpaceRistretto255Sha512>::respond(
         &ya_bytes,
         &prs,
         &ci,
@@ -436,6 +443,7 @@ fn test_full_protocol_symmetric() {
     .unwrap();
 
     // Initiator finish
+    let yb_bytes = h(YB_POINT_HEX);
     let init_output = state
         .finish(&yb_bytes, &ad_b, CpaceMode::Symmetric)
         .unwrap();
@@ -473,12 +481,18 @@ fn test_wrong_password_fails() {
 
     // Initiator with correct password
     let mut rng_a = FixedScalarRng::new(YA_SCALAR_HEX);
-    let (ya_bytes, state) =
-        CpaceRistretto255Initiator::start(&prs_correct, &ci, &sid, &ad_a, &mut rng_a).unwrap();
+    let (ya_bytes, state) = CpaceInitiator::<CpaceRistretto255Sha512>::start(
+        &prs_correct,
+        &ci,
+        &sid,
+        &ad_a,
+        &mut rng_a,
+    )
+    .unwrap();
 
     // Responder with wrong password
     let mut rng_b = FixedScalarRng::new(YB_SCALAR_HEX);
-    let (yb_bytes, resp_output) = CpaceRistretto255Responder::respond(
+    let (yb_bytes, resp_output) = CpaceResponder::<CpaceRistretto255Sha512>::respond(
         &ya_bytes,
         &prs_wrong,
         &ci,

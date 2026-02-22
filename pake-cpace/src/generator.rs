@@ -13,7 +13,7 @@
 
 use alloc::vec;
 use alloc::vec::Vec;
-use digest::Digest;
+use pake_core::crypto::{CpaceGroup, Hash};
 use pake_core::encoding::{lv_cat, prepend_len};
 
 use crate::ciphersuite::CpaceCiphersuite;
@@ -42,8 +42,8 @@ pub fn calculate_generator<C: CpaceCiphersuite>(
     password: &[u8],
     ci: &[u8],
     sid: &[u8],
-) -> C::Group {
+) -> Result<C::Group, pake_core::PakeError> {
     let gen_str = generator_string::<C>(password, ci, sid);
     let hash_output = C::Hash::digest(&gen_str);
-    C::element_derivation(hash_output.as_ref())
+    C::Group::from_uniform_bytes(&hash_output)
 }

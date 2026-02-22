@@ -9,6 +9,7 @@ use crate::messages::{CredentialResponse, RegistrationRecord, KE1, KE2, KE3};
 use crate::oprf::{self, OprfClientState};
 use crate::server_setup::ServerSetup;
 use crate::OpaqueError;
+use pake_core::crypto::{DhGroup, Hash, Kdf, Mac};
 use pake_core::SharedSecret;
 use rand_core::CryptoRngCore;
 use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
@@ -43,7 +44,7 @@ impl<C: OpaqueCiphersuite> ClientLogin<C> {
 
         let mut client_eph_seed = vec![0u8; C::NSEED];
         rng.fill_bytes(&mut client_eph_seed);
-        let (client_eph_sk, client_eph_pk) = C::derive_dh_keypair(&client_eph_seed)?;
+        let (client_eph_sk, client_eph_pk) = C::Dh::derive_keypair(&client_eph_seed)?;
 
         let ke1 = KE1 {
             blinded_message,
@@ -73,7 +74,7 @@ impl<C: OpaqueCiphersuite> ClientLogin<C> {
     ) -> Result<(KE1, ClientLoginState<C>), OpaqueError> {
         let (oprf_state, blinded_message) = oprf::oprf_client_blind::<C>(password, blind_rng)?;
 
-        let (client_eph_sk, client_eph_pk) = C::derive_dh_keypair(client_keyshare_seed)?;
+        let (client_eph_sk, client_eph_pk) = C::Dh::derive_keypair(client_keyshare_seed)?;
 
         let ke1 = KE1 {
             blinded_message,
@@ -117,14 +118,14 @@ impl<C: OpaqueCiphersuite> ClientLoginState<C> {
         let randomized_pwd = Zeroizing::new(derive_randomized_password::<C>(&oprf_output)?);
 
         // 3. Unmask credential response
-        let masking_key = Zeroizing::new(C::kdf_expand(&randomized_pwd, b"MaskingKey", C::NH)?);
+        let masking_key = Zeroizing::new(C::Kdf::expand(&randomized_pwd, b"MaskingKey", C::NH)?);
         let cred_resp_size = CredentialResponse::size::<C>();
 
         // XOR-decrypt: credential_response_pad = Expand(masking_key, concat(masking_nonce, "CredentialResponsePad"), cred_resp_size)
         let mut pad_info = Vec::with_capacity(ke2.masking_nonce.len() + 21);
         pad_info.extend_from_slice(&ke2.masking_nonce);
         pad_info.extend_from_slice(b"CredentialResponsePad");
-        let pad = C::kdf_expand(&masking_key, &pad_info, cred_resp_size)?;
+        let pad = C::Kdf::expand(&masking_key, &pad_info, cred_resp_size)?;
 
         let mut cred_resp_bytes = vec![0u8; cred_resp_size];
         for i in 0..cred_resp_size {
@@ -156,10 +157,6 @@ impl<C: OpaqueCiphersuite> ClientLoginState<C> {
         };
 
         // 5. TripleDH
-        // From client perspective:
-        //   dh1 = client_eph_sk * server_eph_pk (ke2.server_keyshare)
-        //   dh2 = client_eph_sk * server_static_pk (cred_resp.server_public_key)
-        //   dh3 = client_static_sk * server_eph_pk (ke2.server_keyshare)
         let ikm = Zeroizing::new(triple_dh_ikm::<C>(
             &self.client_eph_sk,
             &ke2.server_keyshare,
@@ -184,18 +181,18 @@ impl<C: OpaqueCiphersuite> ClientLoginState<C> {
         let km3 = Zeroizing::new(km3);
 
         // 7. Verify server MAC
-        let preamble_hash = C::hash(&preamble);
-        let expected_server_mac = C::mac(&km2, &preamble_hash)?;
+        let preamble_hash = C::Hash::digest(&preamble);
+        let expected_server_mac = C::Mac::mac(&km2, &preamble_hash)?;
 
-        C::mac_verify(&km2, &preamble_hash, &ke2.server_mac)
+        C::Mac::verify(&km2, &preamble_hash, &ke2.server_mac)
             .map_err(|_| OpaqueError::ServerAuthenticationError)?;
 
         // 8. Compute client MAC: MAC(km3, Hash(preamble || server_mac))
         let mut transcript2_input = Vec::with_capacity(preamble.len() + expected_server_mac.len());
         transcript2_input.extend_from_slice(&preamble);
         transcript2_input.extend_from_slice(&expected_server_mac);
-        let transcript2_hash = C::hash(&transcript2_input);
-        let client_mac = C::mac(&km3, &transcript2_hash)?;
+        let transcript2_hash = C::Hash::digest(&transcript2_input);
+        let client_mac = C::Mac::mac(&km3, &transcript2_hash)?;
 
         let ke3 = KE3 { client_mac };
 
@@ -318,11 +315,11 @@ impl<C: OpaqueCiphersuite> ServerLogin<C> {
         rng.fill_bytes(&mut server_nonce);
         let mut server_eph_seed = vec![0u8; C::NSEED];
         rng.fill_bytes(&mut server_eph_seed);
-        let (server_eph_sk_raw, server_eph_pk) = C::derive_dh_keypair(&server_eph_seed)?;
+        let (server_eph_sk_raw, server_eph_pk) = C::Dh::derive_keypair(&server_eph_seed)?;
         let server_eph_sk = Zeroizing::new(server_eph_sk_raw);
 
         // 5. Generate a fake client public key (random valid point)
-        let (_, fake_client_pk) = C::generate_auth_keypair(rng)?;
+        let (_, fake_client_pk) = C::Dh::generate_keypair(rng)?;
 
         // 6. Resolve identities for preamble
         let server_id_for_preamble: &[u8] = setup.public_key();
@@ -361,8 +358,8 @@ impl<C: OpaqueCiphersuite> ServerLogin<C> {
         let km2 = Zeroizing::new(km2);
 
         // 9. Compute server MAC
-        let preamble_hash = C::hash(&preamble);
-        let server_mac = C::mac(&km2, &preamble_hash)?;
+        let preamble_hash = C::Hash::digest(&preamble);
+        let server_mac = C::Mac::mac(&km2, &preamble_hash)?;
 
         Ok(KE2 {
             evaluated_message,
@@ -407,7 +404,7 @@ impl<C: OpaqueCiphersuite> ServerLogin<C> {
         let mut pad_info = Vec::with_capacity(masking_nonce.len() + 21);
         pad_info.extend_from_slice(&masking_nonce);
         pad_info.extend_from_slice(b"CredentialResponsePad");
-        let pad = C::kdf_expand(&record.masking_key, &pad_info, cred_resp_size)?;
+        let pad = C::Kdf::expand(&record.masking_key, &pad_info, cred_resp_size)?;
 
         let mut masked_response = vec![0u8; cred_resp_size];
         for i in 0..cred_resp_size {
@@ -415,7 +412,7 @@ impl<C: OpaqueCiphersuite> ServerLogin<C> {
         }
 
         // 4. Server ephemeral keypair
-        let (server_eph_sk_raw, server_eph_pk) = C::derive_dh_keypair(server_keyshare_seed)?;
+        let (server_eph_sk_raw, server_eph_pk) = C::Dh::derive_keypair(server_keyshare_seed)?;
         let server_eph_sk = Zeroizing::new(server_eph_sk_raw);
 
         // 5. Resolve identities
@@ -430,10 +427,7 @@ impl<C: OpaqueCiphersuite> ServerLogin<C> {
             server_identity
         };
 
-        // 6. TripleDH from server perspective:
-        //   dh1 = server_eph_sk * client_eph_pk (ke1.client_keyshare)
-        //   dh2 = server_static_sk * client_eph_pk (ke1.client_keyshare)
-        //   dh3 = server_eph_sk * client_static_pk (record.client_public_key)
+        // 6. TripleDH from server perspective
         let ikm = Zeroizing::new(triple_dh_ikm::<C>(
             &server_eph_sk,
             &ke1.client_keyshare,
@@ -468,15 +462,15 @@ impl<C: OpaqueCiphersuite> ServerLogin<C> {
         let km3 = Zeroizing::new(km3);
 
         // 8. Compute server MAC
-        let preamble_hash = C::hash(&preamble);
-        let server_mac = C::mac(&km2, &preamble_hash)?;
+        let preamble_hash = C::Hash::digest(&preamble);
+        let server_mac = C::Mac::mac(&km2, &preamble_hash)?;
 
         // 9. Compute expected client MAC: MAC(km3, Hash(preamble || server_mac))
         let mut transcript2_input = Vec::with_capacity(preamble.len() + server_mac.len());
         transcript2_input.extend_from_slice(&preamble);
         transcript2_input.extend_from_slice(&server_mac);
-        let transcript2_hash = C::hash(&transcript2_input);
-        let expected_client_mac = C::mac(&km3, &transcript2_hash)?;
+        let transcript2_hash = C::Hash::digest(&transcript2_input);
+        let expected_client_mac = C::Mac::mac(&km3, &transcript2_hash)?;
 
         let ke2 = KE2 {
             evaluated_message,

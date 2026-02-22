@@ -1,6 +1,7 @@
 //! Server long-term setup for OPAQUE.
 
 use crate::ciphersuite::OpaqueCiphersuite;
+use pake_core::crypto::DhGroup;
 use rand_core::CryptoRngCore;
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
@@ -21,7 +22,7 @@ impl<C: OpaqueCiphersuite> ServerSetup<C> {
         let mut oprf_seed = vec![0u8; C::NH];
         rng.fill_bytes(&mut oprf_seed);
 
-        let (server_private_key, server_public_key) = C::generate_auth_keypair(rng)?;
+        let (server_private_key, server_public_key) = C::Dh::generate_keypair(rng)?;
 
         Ok(Self {
             oprf_seed,

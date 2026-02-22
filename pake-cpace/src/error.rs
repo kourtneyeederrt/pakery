@@ -23,6 +23,16 @@ impl fmt::Display for CpaceError {
 #[cfg(feature = "std")]
 impl std::error::Error for CpaceError {}
 
+impl From<pake_core::PakeError> for CpaceError {
+    fn from(e: pake_core::PakeError) -> Self {
+        match e {
+            pake_core::PakeError::InvalidPoint => CpaceError::InvalidPoint,
+            pake_core::PakeError::IdentityPoint => CpaceError::IdentityPoint,
+            _ => CpaceError::InvalidPoint,
+        }
+    }
+}
+
 impl From<CpaceError> for pake_core::PakeError {
     fn from(e: CpaceError) -> Self {
         match e {

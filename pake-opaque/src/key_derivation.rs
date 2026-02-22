@@ -1,8 +1,8 @@
 //! Key derivation functions for the OPAQUE protocol (RFC 9807 Section 6.4).
 
 use crate::ciphersuite::OpaqueCiphersuite;
-use crate::key_stretch::KeyStretchingFunction;
 use crate::OpaqueError;
+use pake_core::crypto::{DhGroup, Hash, Kdf, Ksf};
 use zeroize::Zeroizing;
 
 /// I2OSP: Integer to Octet String Primitive (big-endian encoding).
@@ -40,7 +40,7 @@ pub fn expand_label<C: OpaqueCiphersuite>(
     custom_label.extend_from_slice(&i2osp(context.len(), 1));
     custom_label.extend_from_slice(context);
 
-    C::kdf_expand(secret, &custom_label, length)
+    Ok(C::Kdf::expand(secret, &custom_label, length)?)
 }
 
 /// Derive-Secret per RFC 9807:
@@ -69,7 +69,7 @@ pub fn derive_randomized_password<C: OpaqueCiphersuite>(
     let mut ikm = Zeroizing::new(Vec::with_capacity(oprf_output.len() + hardened.len()));
     ikm.extend_from_slice(oprf_output);
     ikm.extend_from_slice(&hardened);
-    Ok(C::kdf_extract(&[], &ikm))
+    Ok(C::Kdf::extract(&[], &ikm))
 }
 
 /// Build the transcript preamble for the 3DH key exchange.
@@ -130,8 +130,8 @@ pub fn derive_keys<C: OpaqueCiphersuite>(
     ikm: &[u8],
     preamble: &[u8],
 ) -> Result<(Vec<u8>, Vec<u8>, Vec<u8>), OpaqueError> {
-    let prk = Zeroizing::new(C::kdf_extract(&[], ikm));
-    let preamble_hash = C::hash(preamble);
+    let prk = Zeroizing::new(C::Kdf::extract(&[], ikm));
+    let preamble_hash = C::Hash::digest(preamble);
 
     let handshake_secret = Zeroizing::new(derive_secret::<C>(
         &prk,
@@ -161,9 +161,9 @@ pub fn triple_dh_ikm<C: OpaqueCiphersuite>(
     dh3_sk: &[u8],
     dh3_pk: &[u8],
 ) -> Result<Vec<u8>, OpaqueError> {
-    let dh1 = Zeroizing::new(C::diffie_hellman(dh1_sk, dh1_pk)?);
-    let dh2 = Zeroizing::new(C::diffie_hellman(dh2_sk, dh2_pk)?);
-    let dh3 = Zeroizing::new(C::diffie_hellman(dh3_sk, dh3_pk)?);
+    let dh1 = Zeroizing::new(C::Dh::diffie_hellman(dh1_sk, dh1_pk)?);
+    let dh2 = Zeroizing::new(C::Dh::diffie_hellman(dh2_sk, dh2_pk)?);
+    let dh3 = Zeroizing::new(C::Dh::diffie_hellman(dh3_sk, dh3_pk)?);
 
     let mut ikm = Vec::with_capacity(dh1.len() + dh2.len() + dh3.len());
     ikm.extend_from_slice(&dh1);

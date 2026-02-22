@@ -38,6 +38,17 @@ impl fmt::Display for OpaqueError {
 #[cfg(feature = "std")]
 impl std::error::Error for OpaqueError {}
 
+impl From<pake_core::PakeError> for OpaqueError {
+    fn from(e: pake_core::PakeError) -> Self {
+        match e {
+            pake_core::PakeError::InvalidInput(msg) => OpaqueError::InvalidInput(msg),
+            pake_core::PakeError::InvalidPoint => OpaqueError::InternalError("invalid point"),
+            pake_core::PakeError::IdentityPoint => OpaqueError::InternalError("identity point"),
+            pake_core::PakeError::ProtocolError(msg) => OpaqueError::InternalError(msg),
+        }
+    }
+}
+
 impl From<OpaqueError> for pake_core::PakeError {
     fn from(e: OpaqueError) -> Self {
         match e {

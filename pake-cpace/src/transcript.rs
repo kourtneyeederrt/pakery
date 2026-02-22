@@ -1,7 +1,7 @@
 //! Transcript construction and ISK/session-ID derivation per draft-irtf-cfrg-cpace-18.
 
 use alloc::vec::Vec;
-use digest::Digest;
+use pake_core::crypto::Hash;
 use pake_core::encoding::{lv_cat, o_cat};
 use pake_core::SharedSecret;
 
@@ -63,7 +63,7 @@ pub fn derive_isk<C: CpaceCiphersuite>(
     hasher.update(&transcript);
     let hash = hasher.finalize();
 
-    SharedSecret::new(hash.to_vec())
+    SharedSecret::new(hash)
 }
 
 /// Derive the optional session ID output.
@@ -86,5 +86,5 @@ pub fn derive_session_id<C: CpaceCiphersuite>(
     let mut hasher = C::Hash::new();
     hasher.update(b"CPaceSidOutput");
     hasher.update(&transcript);
-    hasher.finalize().to_vec()
+    hasher.finalize()
 }

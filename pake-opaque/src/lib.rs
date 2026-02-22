@@ -14,7 +14,6 @@ pub mod ciphersuite;
 pub mod envelope;
 pub mod error;
 pub mod key_derivation;
-pub mod key_stretch;
 pub mod login;
 pub mod messages;
 pub mod oprf;
@@ -29,11 +28,3 @@ pub use messages::{
 };
 pub use registration::{ClientRegistration, ClientRegistrationState, ServerRegistration};
 pub use server_setup::ServerSetup;
-
-/// Type alias for the Ristretto255+SHA512 ciphersuite.
-#[cfg(feature = "ristretto255")]
-pub type Ristretto255Sha512 = ciphersuite::Ristretto255Sha512;
-
-/// Type alias for the Ristretto255+SHA512+Argon2id ciphersuite.
-#[cfg(all(feature = "ristretto255", feature = "argon2"))]
-pub type Ristretto255Sha512Argon2 = ciphersuite::Ristretto255Sha512Argon2;

@@ -1,7 +1,6 @@
 //! CPace responder (one-shot).
 
 use alloc::vec::Vec;
-use group::{Group, GroupEncoding};
 use rand_core::CryptoRngCore;
 
 use crate::ciphersuite::CpaceCiphersuite;
@@ -9,6 +8,7 @@ use crate::error::CpaceError;
 use crate::generator::calculate_generator;
 use crate::initiator::CpaceOutput;
 use crate::transcript::{derive_isk, derive_session_id, CpaceMode};
+use pake_core::crypto::CpaceGroup;
 
 /// CPace responder: processes the initiator's message and produces the response in one step.
 pub struct CpaceResponder<C: CpaceCiphersuite>(core::marker::PhantomData<C>);
@@ -29,39 +29,30 @@ impl<C: CpaceCiphersuite> CpaceResponder<C> {
         rng: &mut impl CryptoRngCore,
     ) -> Result<(Vec<u8>, CpaceOutput), CpaceError> {
         // Decode Ya
-        let repr = <C::Group as GroupEncoding>::Repr::default();
-        let mut repr = repr;
-        let repr_slice = repr.as_mut();
-        if initiator_share.len() != repr_slice.len() {
-            return Err(CpaceError::InvalidPoint);
-        }
-        repr_slice.copy_from_slice(initiator_share);
-
-        let ya: C::Group =
-            Option::from(C::Group::from_bytes(&repr)).ok_or(CpaceError::InvalidPoint)?;
+        let ya = C::Group::from_bytes(initiator_share).map_err(|_| CpaceError::InvalidPoint)?;
 
         // Check Ya != identity
-        if bool::from(ya.is_identity()) {
+        if ya.is_identity() {
             return Err(CpaceError::IdentityPoint);
         }
 
         // Calculate generator
-        let g = calculate_generator::<C>(password, ci, sid);
+        let g = calculate_generator::<C>(password, ci, sid)?;
 
         // Sample yb, compute Yb = yb * g
-        let yb_scalar = C::sample_scalar(rng);
-        let yb_point = g * yb_scalar;
-        let yb_bytes = yb_point.to_bytes().as_ref().to_vec();
+        let yb_scalar = C::Group::random_scalar(rng);
+        let yb_point = g.scalar_mul(&yb_scalar);
+        let yb_bytes = yb_point.to_bytes();
 
         // K = yb * Ya
-        let k = ya * yb_scalar;
+        let k = ya.scalar_mul(&yb_scalar);
 
         // Check K != identity
-        if bool::from(k.is_identity()) {
+        if k.is_identity() {
             return Err(CpaceError::IdentityPoint);
         }
 
-        let k_bytes = k.to_bytes().as_ref().to_vec();
+        let k_bytes = k.to_bytes();
 
         // Derive ISK
         let isk = derive_isk::<C>(

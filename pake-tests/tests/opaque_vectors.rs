@@ -4,17 +4,37 @@
 //! Vector 1: default identities (public keys)
 //! Vector 2: explicit identities (client=alice, server=bob)
 
-use pake_opaque::ciphersuite::Ristretto255Sha512;
+use pake_core::crypto::IdentityKsf;
+use pake_crypto::{HkdfSha512, HmacSha512, Ristretto255Dh, Ristretto255Oprf, Sha512Hash};
 use pake_opaque::OpaqueCiphersuite;
 use pake_opaque::{
     ClientLogin, ClientRegistration, OpaqueError, RegistrationRequest, ServerLogin,
     ServerRegistration, ServerSetup, KE1,
 };
 
+/// OPAQUE ciphersuite: Ristretto255 + SHA-512 + IdentityKSF.
+struct OpaqueRistretto255Sha512;
+
+impl OpaqueCiphersuite for OpaqueRistretto255Sha512 {
+    type Hash = Sha512Hash;
+    type Kdf = HkdfSha512;
+    type Mac = HmacSha512;
+    type Dh = Ristretto255Dh;
+    type Oprf = Ristretto255Oprf;
+    type Ksf = IdentityKsf;
+
+    const NN: usize = 32;
+    const NSEED: usize = 32;
+    const NOE: usize = 32;
+    const NOK: usize = 32;
+    const NM: usize = 64;
+    const NH: usize = 64;
+    const NPK: usize = 32;
+    const NSK: usize = 32;
+    const NX: usize = 64;
+}
+
 /// Deterministic RNG that returns pre-determined bytes, one scalar at a time.
-///
-/// For voprf's OprfClient::blind, the RNG is called to sample a random scalar.
-/// We feed it exactly the bytes needed for one 64-byte sample (which gets reduced mod order).
 struct SequentialRng {
     chunks: Vec<Vec<u8>>,
     index: usize,
@@ -122,11 +142,9 @@ mod vector1 {
 
     // Intermediates
     pub const OPRF_KEY: &str = "5d4c6a8b7c7138182afb4345d1fae6a9f18a1744afbcc3854f8f5a2b4b4c6d05";
-    pub const _RANDOMIZED_PWD: &str = "aac48c25ab036e30750839d31d6e73007344cb1155289fb7d329beb932e9adeea73d5d5c22a0ce1952f8aba6d66007615cd1698d4ac85ef1fcf150031d1435d9";
     pub const CLIENT_PUBLIC_KEY: &str =
         "76a845464c68a5d2f7e442436bb1424953b17d3e2e289ccbaccafb57ac5c3675";
     pub const MASKING_KEY: &str = "1ac5844383c7708077dea41cbefe2fa15724f449e535dd7dd562e66f5ecfb95864eadddec9db5874959905117dad40a4524111849799281fefe3c51fa82785c5";
-    pub const _AUTH_KEY: &str = "6cd32316f18d72a9a927a83199fa030663a38ce0c11fbaef82aa90037730494fc555c4d49506284516edd1628c27965b7555a4ebfed2223199f6c67966dde822";
     pub const ENVELOPE: &str = "ac13171b2f17bc2c74997f0fce1e1f35bec6b91fe2e12dbd323d23ba7a38dfec634b0f5b96109c198a8027da51854c35bee90d1e1c781806d07d49b76de6a28b8d9e9b6c93b9f8b64d16dddd9c5bfb5fea48ee8fd2f75012a8b308605cdd8ba5";
 
     // Outputs
@@ -182,21 +200,23 @@ fn h(hex_str: &str) -> Vec<u8> {
 
 #[test]
 fn test_triple_dh_and_key_derivation() {
+    use pake_core::crypto::DhGroup;
+
     let expected_server_mac_key = "0d36b26cfe38f51f804f0a9361818f32ee1ce2a4e5578653b527184af058d3b2d8075c296fd84d24677913d1baa109290cd81a13ed383f9091a3804e65298dfc";
     let expected_client_mac_key = "91750adbac54a5e8e53b4c233cc8d369fe83b0de1b6a3cd85575eeb0bb01a6a90a086a2cf5fe75fff2a9379c30ba9049510a33b5b0b1444a88800fc3eee2260d";
     let expected_session_key = vector1::SESSION_KEY;
 
     // Derive the ephemeral keypairs
     let (server_eph_sk, _) =
-        Ristretto255Sha512::derive_dh_keypair(&h(vector1::SERVER_KEYSHARE_SEED)).unwrap();
+        Ristretto255Dh::derive_keypair(&h(vector1::SERVER_KEYSHARE_SEED)).unwrap();
     let (_, client_eph_pk) =
-        Ristretto255Sha512::derive_dh_keypair(&h(vector1::CLIENT_KEYSHARE_SEED)).unwrap();
+        Ristretto255Dh::derive_keypair(&h(vector1::CLIENT_KEYSHARE_SEED)).unwrap();
 
     // Server-side TripleDH
     let server_sk = h(vector1::SERVER_PRIVATE_KEY);
     let client_pk = h(vector1::CLIENT_PUBLIC_KEY);
 
-    let ikm = pake_opaque::key_derivation::triple_dh_ikm::<Ristretto255Sha512>(
+    let ikm = pake_opaque::key_derivation::triple_dh_ikm::<OpaqueRistretto255Sha512>(
         &server_eph_sk,
         &client_eph_pk,
         &server_sk,
@@ -223,7 +243,8 @@ fn test_triple_dh_and_key_derivation() {
 
     // Derive keys
     let (km2, km3, session_key) =
-        pake_opaque::key_derivation::derive_keys::<Ristretto255Sha512>(&ikm, &preamble).unwrap();
+        pake_opaque::key_derivation::derive_keys::<OpaqueRistretto255Sha512>(&ikm, &preamble)
+            .unwrap();
 
     assert_eq!(hex::encode(&km2), expected_server_mac_key);
     assert_eq!(hex::encode(&km3), expected_client_mac_key);
@@ -232,7 +253,7 @@ fn test_triple_dh_and_key_derivation() {
 
 #[test]
 fn test_oprf_key_derivation() {
-    let oprf_key = pake_opaque::oprf::derive_oprf_key::<Ristretto255Sha512>(
+    let oprf_key = pake_opaque::oprf::derive_oprf_key::<OpaqueRistretto255Sha512>(
         &h(vector1::OPRF_SEED),
         &h(vector1::CREDENTIAL_ID),
     )
@@ -247,7 +268,7 @@ fn test_registration_request() {
     let mut rng = SequentialRng::from_single(&blind);
 
     let (request, _state) =
-        ClientRegistration::<Ristretto255Sha512>::start(&password, &mut rng).unwrap();
+        ClientRegistration::<OpaqueRistretto255Sha512>::start(&password, &mut rng).unwrap();
 
     assert_eq!(
         hex::encode(request.serialize()),
@@ -257,7 +278,7 @@ fn test_registration_request() {
 
 #[test]
 fn test_registration_response() {
-    let setup = ServerSetup::<Ristretto255Sha512>::new_with_key(
+    let setup = ServerSetup::<OpaqueRistretto255Sha512>::new_with_key(
         h(vector1::OPRF_SEED),
         h(vector1::SERVER_PRIVATE_KEY),
         h(vector1::SERVER_PUBLIC_KEY),
@@ -266,7 +287,7 @@ fn test_registration_response() {
         blinded_message: h(vector1::REGISTRATION_REQUEST),
     };
 
-    let response = ServerRegistration::<Ristretto255Sha512>::start(
+    let response = ServerRegistration::<OpaqueRistretto255Sha512>::start(
         &setup,
         &request,
         &h(vector1::CREDENTIAL_ID),
@@ -281,22 +302,20 @@ fn test_registration_response() {
 
 #[test]
 fn test_intermediate_values() {
-    // Verify intermediate values by checking registration record outputs
-    // which depend on randomized_password, masking_key, auth_key, etc.
     let password = h(vector1::PASSWORD);
     let blind = h(vector1::BLIND_REGISTRATION);
     let mut rng = SequentialRng::from_single(&blind);
 
     let (request, state) =
-        ClientRegistration::<Ristretto255Sha512>::start(&password, &mut rng).unwrap();
+        ClientRegistration::<OpaqueRistretto255Sha512>::start(&password, &mut rng).unwrap();
 
-    let setup = ServerSetup::<Ristretto255Sha512>::new_with_key(
+    let setup = ServerSetup::<OpaqueRistretto255Sha512>::new_with_key(
         h(vector1::OPRF_SEED),
         h(vector1::SERVER_PRIVATE_KEY),
         h(vector1::SERVER_PUBLIC_KEY),
     );
 
-    let response = ServerRegistration::<Ristretto255Sha512>::start(
+    let response = ServerRegistration::<OpaqueRistretto255Sha512>::start(
         &setup,
         &request,
         &h(vector1::CREDENTIAL_ID),
@@ -312,7 +331,6 @@ fn test_intermediate_values() {
         )
         .unwrap();
 
-    // These verify the entire chain: OPRF → randomized_pwd → auth_key/masking_key/envelope
     assert_eq!(
         hex::encode(&record.client_public_key),
         vector1::CLIENT_PUBLIC_KEY
@@ -329,15 +347,15 @@ fn test_registration_record() {
     let mut rng = SequentialRng::from_single(&blind);
 
     let (request, state) =
-        ClientRegistration::<Ristretto255Sha512>::start(&password, &mut rng).unwrap();
+        ClientRegistration::<OpaqueRistretto255Sha512>::start(&password, &mut rng).unwrap();
 
-    let setup = ServerSetup::<Ristretto255Sha512>::new_with_key(
+    let setup = ServerSetup::<OpaqueRistretto255Sha512>::new_with_key(
         h(vector1::OPRF_SEED),
         h(vector1::SERVER_PRIVATE_KEY),
         h(vector1::SERVER_PUBLIC_KEY),
     );
 
-    let response = ServerRegistration::<Ristretto255Sha512>::start(
+    let response = ServerRegistration::<OpaqueRistretto255Sha512>::start(
         &setup,
         &request,
         &h(vector1::CREDENTIAL_ID),
@@ -372,36 +390,39 @@ fn test_ke1() {
     let blind = h(vector1::BLIND_LOGIN);
     let mut blind_rng = SequentialRng::from_single(&blind);
 
-    let (ke1, _state) = ClientLogin::<Ristretto255Sha512>::start_with_blind_and_nonce_and_seed(
-        &password,
-        &mut blind_rng,
-        &h(vector1::CLIENT_NONCE),
-        &h(vector1::CLIENT_KEYSHARE_SEED),
-    )
-    .unwrap();
+    let (ke1, _state) =
+        ClientLogin::<OpaqueRistretto255Sha512>::start_with_blind_and_nonce_and_seed(
+            &password,
+            &mut blind_rng,
+            &h(vector1::CLIENT_NONCE),
+            &h(vector1::CLIENT_KEYSHARE_SEED),
+        )
+        .unwrap();
 
     assert_eq!(hex::encode(ke1.serialize()), vector1::KE1_HEX);
 }
 
 #[test]
 fn test_ke2() {
-    // First do registration to get the record
     let password = h(vector1::PASSWORD);
     let blind_reg = h(vector1::BLIND_REGISTRATION);
     let mut reg_rng = SequentialRng::from_single(&blind_reg);
 
-    let setup = ServerSetup::<Ristretto255Sha512>::new_with_key(
+    let setup = ServerSetup::<OpaqueRistretto255Sha512>::new_with_key(
         h(vector1::OPRF_SEED),
         h(vector1::SERVER_PRIVATE_KEY),
         h(vector1::SERVER_PUBLIC_KEY),
     );
 
     let (req, reg_state) =
-        ClientRegistration::<Ristretto255Sha512>::start(&password, &mut reg_rng).unwrap();
+        ClientRegistration::<OpaqueRistretto255Sha512>::start(&password, &mut reg_rng).unwrap();
 
-    let reg_resp =
-        ServerRegistration::<Ristretto255Sha512>::start(&setup, &req, &h(vector1::CREDENTIAL_ID))
-            .unwrap();
+    let reg_resp = ServerRegistration::<OpaqueRistretto255Sha512>::start(
+        &setup,
+        &req,
+        &h(vector1::CREDENTIAL_ID),
+    )
+    .unwrap();
 
     let (record, _) = reg_state
         .finish_with_nonce(
@@ -412,10 +433,9 @@ fn test_ke2() {
         )
         .unwrap();
 
-    // Now do login
-    let ke1 = KE1::deserialize::<Ristretto255Sha512>(&h(vector1::KE1_HEX)).unwrap();
+    let ke1 = KE1::deserialize::<OpaqueRistretto255Sha512>(&h(vector1::KE1_HEX)).unwrap();
 
-    let (ke2, _server_state) = ServerLogin::<Ristretto255Sha512>::start_with_nonce_and_seed(
+    let (ke2, _server_state) = ServerLogin::<OpaqueRistretto255Sha512>::start_with_nonce_and_seed(
         &setup,
         &record,
         &ke1,
@@ -434,23 +454,25 @@ fn test_ke2() {
 
 #[test]
 fn test_ke3_and_session_key() {
-    // Full registration
     let password = h(vector1::PASSWORD);
     let blind_reg = h(vector1::BLIND_REGISTRATION);
     let mut reg_rng = SequentialRng::from_single(&blind_reg);
 
-    let setup = ServerSetup::<Ristretto255Sha512>::new_with_key(
+    let setup = ServerSetup::<OpaqueRistretto255Sha512>::new_with_key(
         h(vector1::OPRF_SEED),
         h(vector1::SERVER_PRIVATE_KEY),
         h(vector1::SERVER_PUBLIC_KEY),
     );
 
     let (req, reg_state) =
-        ClientRegistration::<Ristretto255Sha512>::start(&password, &mut reg_rng).unwrap();
+        ClientRegistration::<OpaqueRistretto255Sha512>::start(&password, &mut reg_rng).unwrap();
 
-    let reg_resp =
-        ServerRegistration::<Ristretto255Sha512>::start(&setup, &req, &h(vector1::CREDENTIAL_ID))
-            .unwrap();
+    let reg_resp = ServerRegistration::<OpaqueRistretto255Sha512>::start(
+        &setup,
+        &req,
+        &h(vector1::CREDENTIAL_ID),
+    )
+    .unwrap();
 
     let (record, _) = reg_state
         .finish_with_nonce(
@@ -466,7 +488,7 @@ fn test_ke3_and_session_key() {
     let mut blind_rng = SequentialRng::from_single(&blind_login);
 
     let (ke1, client_state) =
-        ClientLogin::<Ristretto255Sha512>::start_with_blind_and_nonce_and_seed(
+        ClientLogin::<OpaqueRistretto255Sha512>::start_with_blind_and_nonce_and_seed(
             &password,
             &mut blind_rng,
             &h(vector1::CLIENT_NONCE),
@@ -475,7 +497,7 @@ fn test_ke3_and_session_key() {
         .unwrap();
 
     // Server login start
-    let (ke2, server_state) = ServerLogin::<Ristretto255Sha512>::start_with_nonce_and_seed(
+    let (ke2, server_state) = ServerLogin::<OpaqueRistretto255Sha512>::start_with_nonce_and_seed(
         &setup,
         &record,
         &ke1,
@@ -525,15 +547,15 @@ fn test_vector2_registration_record() {
     let mut rng = SequentialRng::from_single(&blind);
 
     let (request, state) =
-        ClientRegistration::<Ristretto255Sha512>::start(&password, &mut rng).unwrap();
+        ClientRegistration::<OpaqueRistretto255Sha512>::start(&password, &mut rng).unwrap();
 
-    let setup = ServerSetup::<Ristretto255Sha512>::new_with_key(
+    let setup = ServerSetup::<OpaqueRistretto255Sha512>::new_with_key(
         h(vector2::OPRF_SEED),
         h(vector2::SERVER_PRIVATE_KEY),
         h(vector2::SERVER_PUBLIC_KEY),
     );
 
-    let response = ServerRegistration::<Ristretto255Sha512>::start(
+    let response = ServerRegistration::<OpaqueRistretto255Sha512>::start(
         &setup,
         &request,
         &h(vector2::CREDENTIAL_ID),
@@ -563,18 +585,21 @@ fn test_vector2_full_login() {
     let blind_reg = h(vector2::BLIND_REGISTRATION);
     let mut reg_rng = SequentialRng::from_single(&blind_reg);
 
-    let setup = ServerSetup::<Ristretto255Sha512>::new_with_key(
+    let setup = ServerSetup::<OpaqueRistretto255Sha512>::new_with_key(
         h(vector2::OPRF_SEED),
         h(vector2::SERVER_PRIVATE_KEY),
         h(vector2::SERVER_PUBLIC_KEY),
     );
 
     let (req, reg_state) =
-        ClientRegistration::<Ristretto255Sha512>::start(&password, &mut reg_rng).unwrap();
+        ClientRegistration::<OpaqueRistretto255Sha512>::start(&password, &mut reg_rng).unwrap();
 
-    let reg_resp =
-        ServerRegistration::<Ristretto255Sha512>::start(&setup, &req, &h(vector2::CREDENTIAL_ID))
-            .unwrap();
+    let reg_resp = ServerRegistration::<OpaqueRistretto255Sha512>::start(
+        &setup,
+        &req,
+        &h(vector2::CREDENTIAL_ID),
+    )
+    .unwrap();
 
     let (record, _) = reg_state
         .finish_with_nonce(
@@ -590,7 +615,7 @@ fn test_vector2_full_login() {
     let mut blind_rng = SequentialRng::from_single(&blind_login);
 
     let (ke1, client_state) =
-        ClientLogin::<Ristretto255Sha512>::start_with_blind_and_nonce_and_seed(
+        ClientLogin::<OpaqueRistretto255Sha512>::start_with_blind_and_nonce_and_seed(
             &password,
             &mut blind_rng,
             &h(vector2::CLIENT_NONCE),
@@ -601,7 +626,7 @@ fn test_vector2_full_login() {
     assert_eq!(hex::encode(ke1.serialize()), vector2::KE1_HEX);
 
     // Server login start
-    let (ke2, server_state) = ServerLogin::<Ristretto255Sha512>::start_with_nonce_and_seed(
+    let (ke2, server_state) = ServerLogin::<OpaqueRistretto255Sha512>::start_with_nonce_and_seed(
         &setup,
         &record,
         &ke1,
@@ -651,22 +676,21 @@ fn test_full_roundtrip_random() {
     let mut rng = rand_core::OsRng;
     let password = b"correct horse battery staple";
 
-    // Server setup
-    let setup = ServerSetup::<Ristretto255Sha512>::new(&mut rng).unwrap();
+    let setup = ServerSetup::<OpaqueRistretto255Sha512>::new(&mut rng).unwrap();
 
-    // Registration
     let (reg_request, reg_state) =
-        ClientRegistration::<Ristretto255Sha512>::start(password, &mut rng).unwrap();
+        ClientRegistration::<OpaqueRistretto255Sha512>::start(password, &mut rng).unwrap();
 
     let reg_response =
-        ServerRegistration::<Ristretto255Sha512>::start(&setup, &reg_request, b"user123").unwrap();
+        ServerRegistration::<OpaqueRistretto255Sha512>::start(&setup, &reg_request, b"user123")
+            .unwrap();
 
     let (record, export_key_reg) = reg_state.finish(&reg_response, b"", b"", &mut rng).unwrap();
 
-    // Login
-    let (ke1, client_state) = ClientLogin::<Ristretto255Sha512>::start(password, &mut rng).unwrap();
+    let (ke1, client_state) =
+        ClientLogin::<OpaqueRistretto255Sha512>::start(password, &mut rng).unwrap();
 
-    let (ke2, server_state) = ServerLogin::<Ristretto255Sha512>::start(
+    let (ke2, server_state) = ServerLogin::<OpaqueRistretto255Sha512>::start(
         &setup,
         &record,
         &ke1,
@@ -684,9 +708,7 @@ fn test_full_roundtrip_random() {
 
     let server_session_key = server_state.finish(&ke3).unwrap();
 
-    // Both sides should agree on the session key
     assert_eq!(client_session_key, server_session_key);
-    // Export keys should match between registration and login
     assert_eq!(export_key_reg, export_key_login);
 }
 
@@ -694,22 +716,21 @@ fn test_full_roundtrip_random() {
 fn test_wrong_password() {
     let mut rng = rand_core::OsRng;
 
-    let setup = ServerSetup::<Ristretto255Sha512>::new(&mut rng).unwrap();
+    let setup = ServerSetup::<OpaqueRistretto255Sha512>::new(&mut rng).unwrap();
 
-    // Register with password A
     let (reg_request, reg_state) =
-        ClientRegistration::<Ristretto255Sha512>::start(b"password-A", &mut rng).unwrap();
+        ClientRegistration::<OpaqueRistretto255Sha512>::start(b"password-A", &mut rng).unwrap();
 
     let reg_response =
-        ServerRegistration::<Ristretto255Sha512>::start(&setup, &reg_request, b"user123").unwrap();
+        ServerRegistration::<OpaqueRistretto255Sha512>::start(&setup, &reg_request, b"user123")
+            .unwrap();
 
     let (record, _) = reg_state.finish(&reg_response, b"", b"", &mut rng).unwrap();
 
-    // Try to login with password B
     let (ke1, client_state) =
-        ClientLogin::<Ristretto255Sha512>::start(b"password-B", &mut rng).unwrap();
+        ClientLogin::<OpaqueRistretto255Sha512>::start(b"password-B", &mut rng).unwrap();
 
-    let (ke2, _server_state) = ServerLogin::<Ristretto255Sha512>::start(
+    let (ke2, _server_state) = ServerLogin::<OpaqueRistretto255Sha512>::start(
         &setup, &record, &ke1, b"user123", b"ctx", b"", b"", &mut rng,
     )
     .unwrap();
@@ -722,23 +743,23 @@ fn test_wrong_password() {
 fn test_tampered_server_mac() {
     let mut rng = rand_core::OsRng;
 
-    let setup = ServerSetup::<Ristretto255Sha512>::new(&mut rng).unwrap();
+    let setup = ServerSetup::<OpaqueRistretto255Sha512>::new(&mut rng).unwrap();
 
     let (reg_request, reg_state) =
-        ClientRegistration::<Ristretto255Sha512>::start(b"password", &mut rng).unwrap();
+        ClientRegistration::<OpaqueRistretto255Sha512>::start(b"password", &mut rng).unwrap();
     let reg_response =
-        ServerRegistration::<Ristretto255Sha512>::start(&setup, &reg_request, b"user123").unwrap();
+        ServerRegistration::<OpaqueRistretto255Sha512>::start(&setup, &reg_request, b"user123")
+            .unwrap();
     let (record, _) = reg_state.finish(&reg_response, b"", b"", &mut rng).unwrap();
 
     let (ke1, client_state) =
-        ClientLogin::<Ristretto255Sha512>::start(b"password", &mut rng).unwrap();
+        ClientLogin::<OpaqueRistretto255Sha512>::start(b"password", &mut rng).unwrap();
 
-    let (mut ke2, _server_state) = ServerLogin::<Ristretto255Sha512>::start(
+    let (mut ke2, _server_state) = ServerLogin::<OpaqueRistretto255Sha512>::start(
         &setup, &record, &ke1, b"user123", b"ctx", b"", b"", &mut rng,
     )
     .unwrap();
 
-    // Tamper with server MAC
     ke2.server_mac[0] ^= 0xff;
 
     let result = client_state.finish(&ke2, b"ctx", b"", b"");
@@ -752,25 +773,25 @@ fn test_tampered_server_mac() {
 fn test_tampered_client_mac() {
     let mut rng = rand_core::OsRng;
 
-    let setup = ServerSetup::<Ristretto255Sha512>::new(&mut rng).unwrap();
+    let setup = ServerSetup::<OpaqueRistretto255Sha512>::new(&mut rng).unwrap();
 
     let (reg_request, reg_state) =
-        ClientRegistration::<Ristretto255Sha512>::start(b"password", &mut rng).unwrap();
+        ClientRegistration::<OpaqueRistretto255Sha512>::start(b"password", &mut rng).unwrap();
     let reg_response =
-        ServerRegistration::<Ristretto255Sha512>::start(&setup, &reg_request, b"user123").unwrap();
+        ServerRegistration::<OpaqueRistretto255Sha512>::start(&setup, &reg_request, b"user123")
+            .unwrap();
     let (record, _) = reg_state.finish(&reg_response, b"", b"", &mut rng).unwrap();
 
     let (ke1, client_state) =
-        ClientLogin::<Ristretto255Sha512>::start(b"password", &mut rng).unwrap();
+        ClientLogin::<OpaqueRistretto255Sha512>::start(b"password", &mut rng).unwrap();
 
-    let (ke2, server_state) = ServerLogin::<Ristretto255Sha512>::start(
+    let (ke2, server_state) = ServerLogin::<OpaqueRistretto255Sha512>::start(
         &setup, &record, &ke1, b"user123", b"ctx", b"", b"", &mut rng,
     )
     .unwrap();
 
     let (mut ke3, _, _) = client_state.finish(&ke2, b"ctx", b"", b"").unwrap();
 
-    // Tamper with client MAC
     ke3.client_mac[0] ^= 0xff;
 
     let result = server_state.finish(&ke3);
@@ -791,12 +812,12 @@ fn test_fake_credential_response() {
     let mut rng = rand_core::OsRng;
     let password = b"some password";
 
-    let setup = ServerSetup::<Ristretto255Sha512>::new(&mut rng).unwrap();
+    let setup = ServerSetup::<OpaqueRistretto255Sha512>::new(&mut rng).unwrap();
 
     let (ke1, _client_state) =
-        ClientLogin::<Ristretto255Sha512>::start(password, &mut rng).unwrap();
+        ClientLogin::<OpaqueRistretto255Sha512>::start(password, &mut rng).unwrap();
 
-    let fake_ke2 = ServerLogin::<Ristretto255Sha512>::start_fake(
+    let fake_ke2 = ServerLogin::<OpaqueRistretto255Sha512>::start_fake(
         &setup,
         &ke1,
         b"nonexistent_user",
@@ -805,13 +826,12 @@ fn test_fake_credential_response() {
     )
     .unwrap();
 
-    // Verify KE2 has correct size: Noe + Nn + (Npk + Nn + Nm) + Nn + Npk + Nm
-    let expected_size = Ristretto255Sha512::NOE
-        + Ristretto255Sha512::NN
-        + CredentialResponse::size::<Ristretto255Sha512>()
-        + Ristretto255Sha512::NN
-        + Ristretto255Sha512::NPK
-        + Ristretto255Sha512::NM;
+    let expected_size = OpaqueRistretto255Sha512::NOE
+        + OpaqueRistretto255Sha512::NN
+        + CredentialResponse::size::<OpaqueRistretto255Sha512>()
+        + OpaqueRistretto255Sha512::NN
+        + OpaqueRistretto255Sha512::NPK
+        + OpaqueRistretto255Sha512::NM;
     assert_eq!(fake_ke2.serialize().len(), expected_size);
 }
 
@@ -820,13 +840,12 @@ fn test_fake_credential_client_fails() {
     let mut rng = rand_core::OsRng;
     let password = b"some password";
 
-    let setup = ServerSetup::<Ristretto255Sha512>::new(&mut rng).unwrap();
+    let setup = ServerSetup::<OpaqueRistretto255Sha512>::new(&mut rng).unwrap();
 
-    // Client starts login normally
-    let (ke1, client_state) = ClientLogin::<Ristretto255Sha512>::start(password, &mut rng).unwrap();
+    let (ke1, client_state) =
+        ClientLogin::<OpaqueRistretto255Sha512>::start(password, &mut rng).unwrap();
 
-    // Server generates fake response (user doesn't exist)
-    let fake_ke2 = ServerLogin::<Ristretto255Sha512>::start_fake(
+    let fake_ke2 = ServerLogin::<OpaqueRistretto255Sha512>::start_fake(
         &setup,
         &ke1,
         b"nonexistent_user",
@@ -835,7 +854,6 @@ fn test_fake_credential_client_fails() {
     )
     .unwrap();
 
-    // Client should fail at envelope recovery
     let result = client_state.finish(&fake_ke2, b"test-context", b"", b"");
     assert!(matches!(result, Err(OpaqueError::EnvelopeRecoveryError)));
 }
@@ -846,33 +864,55 @@ fn test_fake_credential_client_fails() {
 
 #[cfg(feature = "argon2")]
 mod argon2_tests {
-    use pake_opaque::{
-        ClientLogin, ClientRegistration, OpaqueError, Ristretto255Sha512Argon2, ServerLogin,
-        ServerRegistration, ServerSetup,
-    };
+    use super::*;
+    use pake_crypto::Argon2idKsf;
+
+    /// OPAQUE ciphersuite with Argon2id KSF.
+    struct OpaqueRistretto255Sha512Argon2;
+
+    impl OpaqueCiphersuite for OpaqueRistretto255Sha512Argon2 {
+        type Hash = Sha512Hash;
+        type Kdf = HkdfSha512;
+        type Mac = HmacSha512;
+        type Dh = Ristretto255Dh;
+        type Oprf = Ristretto255Oprf;
+        type Ksf = Argon2idKsf;
+
+        const NN: usize = 32;
+        const NSEED: usize = 32;
+        const NOE: usize = 32;
+        const NOK: usize = 32;
+        const NM: usize = 64;
+        const NH: usize = 64;
+        const NPK: usize = 32;
+        const NSK: usize = 32;
+        const NX: usize = 64;
+    }
 
     #[test]
     fn test_argon2_roundtrip() {
         let mut rng = rand_core::OsRng;
         let password = b"correct horse battery staple";
 
-        let setup = ServerSetup::<Ristretto255Sha512Argon2>::new(&mut rng).unwrap();
+        let setup = ServerSetup::<OpaqueRistretto255Sha512Argon2>::new(&mut rng).unwrap();
 
-        // Registration
         let (reg_request, reg_state) =
-            ClientRegistration::<Ristretto255Sha512Argon2>::start(password, &mut rng).unwrap();
-
-        let reg_response =
-            ServerRegistration::<Ristretto255Sha512Argon2>::start(&setup, &reg_request, b"user123")
+            ClientRegistration::<OpaqueRistretto255Sha512Argon2>::start(password, &mut rng)
                 .unwrap();
+
+        let reg_response = ServerRegistration::<OpaqueRistretto255Sha512Argon2>::start(
+            &setup,
+            &reg_request,
+            b"user123",
+        )
+        .unwrap();
 
         let (record, export_key_reg) = reg_state.finish(&reg_response, b"", b"", &mut rng).unwrap();
 
-        // Login
         let (ke1, client_state) =
-            ClientLogin::<Ristretto255Sha512Argon2>::start(password, &mut rng).unwrap();
+            ClientLogin::<OpaqueRistretto255Sha512Argon2>::start(password, &mut rng).unwrap();
 
-        let (ke2, server_state) = ServerLogin::<Ristretto255Sha512Argon2>::start(
+        let (ke2, server_state) = ServerLogin::<OpaqueRistretto255Sha512Argon2>::start(
             &setup,
             &record,
             &ke1,
@@ -898,23 +938,25 @@ mod argon2_tests {
     fn test_argon2_wrong_password() {
         let mut rng = rand_core::OsRng;
 
-        let setup = ServerSetup::<Ristretto255Sha512Argon2>::new(&mut rng).unwrap();
+        let setup = ServerSetup::<OpaqueRistretto255Sha512Argon2>::new(&mut rng).unwrap();
 
-        // Register with password A
         let (reg_request, reg_state) =
-            ClientRegistration::<Ristretto255Sha512Argon2>::start(b"password-A", &mut rng).unwrap();
-
-        let reg_response =
-            ServerRegistration::<Ristretto255Sha512Argon2>::start(&setup, &reg_request, b"user123")
+            ClientRegistration::<OpaqueRistretto255Sha512Argon2>::start(b"password-A", &mut rng)
                 .unwrap();
+
+        let reg_response = ServerRegistration::<OpaqueRistretto255Sha512Argon2>::start(
+            &setup,
+            &reg_request,
+            b"user123",
+        )
+        .unwrap();
 
         let (record, _) = reg_state.finish(&reg_response, b"", b"", &mut rng).unwrap();
 
-        // Try to login with password B
         let (ke1, client_state) =
-            ClientLogin::<Ristretto255Sha512Argon2>::start(b"password-B", &mut rng).unwrap();
+            ClientLogin::<OpaqueRistretto255Sha512Argon2>::start(b"password-B", &mut rng).unwrap();
 
-        let (ke2, _server_state) = ServerLogin::<Ristretto255Sha512Argon2>::start(
+        let (ke2, _server_state) = ServerLogin::<OpaqueRistretto255Sha512Argon2>::start(
             &setup, &record, &ke1, b"user123", b"ctx", b"", b"", &mut rng,
         )
         .unwrap();

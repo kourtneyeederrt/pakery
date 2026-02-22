@@ -3,6 +3,7 @@
 use crate::ciphersuite::OpaqueCiphersuite;
 use crate::messages::Envelope;
 use crate::OpaqueError;
+use pake_core::crypto::{DhGroup, Kdf, Mac};
 use zeroize::Zeroizing;
 
 /// Cleartext credentials used in the envelope auth tag computation.
@@ -53,27 +54,27 @@ pub fn store<C: OpaqueCiphersuite>(
     nonce: &[u8],
 ) -> Result<(Envelope, Vec<u8>, Vec<u8>, Vec<u8>), OpaqueError> {
     // masking_key = Expand(randomized_pwd, "MaskingKey", Nh)
-    let masking_key = C::kdf_expand(randomized_pwd, b"MaskingKey", C::NH)?;
+    let masking_key = C::Kdf::expand(randomized_pwd, b"MaskingKey", C::NH)?;
 
     // auth_key = Expand(randomized_pwd, concat(nonce, "AuthKey"), Nh)
-    let auth_key = Zeroizing::new(C::kdf_expand(
+    let auth_key = Zeroizing::new(C::Kdf::expand(
         randomized_pwd,
         &envelope_info(nonce, b"AuthKey"),
         C::NH,
     )?);
 
     // export_key = Expand(randomized_pwd, concat(nonce, "ExportKey"), Nh)
-    let export_key = C::kdf_expand(randomized_pwd, &envelope_info(nonce, b"ExportKey"), C::NH)?;
+    let export_key = C::Kdf::expand(randomized_pwd, &envelope_info(nonce, b"ExportKey"), C::NH)?;
 
     // seed = Expand(randomized_pwd, concat(nonce, "PrivateKey"), Nseed)
-    let seed = Zeroizing::new(C::kdf_expand(
+    let seed = Zeroizing::new(C::Kdf::expand(
         randomized_pwd,
         &envelope_info(nonce, b"PrivateKey"),
         C::NSEED,
     )?);
 
     // (client_private_key, client_public_key) = DeriveAuthKeyPair(seed)
-    let (_, client_public_key) = C::derive_dh_keypair(&seed)?;
+    let (_, client_public_key) = C::Dh::derive_keypair(&seed)?;
 
     // Resolve identities: use public keys as defaults if empty
     let client_id = if client_identity.is_empty() {
@@ -93,7 +94,7 @@ pub fn store<C: OpaqueCiphersuite>(
     let mut mac_input = Vec::with_capacity(nonce.len() + cleartext_creds.len());
     mac_input.extend_from_slice(nonce);
     mac_input.extend_from_slice(&cleartext_creds);
-    let auth_tag = C::mac(&auth_key, &mac_input)?;
+    let auth_tag = C::Mac::mac(&auth_key, &mac_input)?;
 
     let envelope = Envelope {
         nonce: nonce.to_vec(),
@@ -117,24 +118,24 @@ pub fn recover<C: OpaqueCiphersuite>(
     let nonce = &envelope.nonce;
 
     // auth_key = Expand(randomized_pwd, concat(nonce, "AuthKey"), Nh)
-    let auth_key = Zeroizing::new(C::kdf_expand(
+    let auth_key = Zeroizing::new(C::Kdf::expand(
         randomized_pwd,
         &envelope_info(nonce, b"AuthKey"),
         C::NH,
     )?);
 
     // export_key = Expand(randomized_pwd, concat(nonce, "ExportKey"), Nh)
-    let export_key = C::kdf_expand(randomized_pwd, &envelope_info(nonce, b"ExportKey"), C::NH)?;
+    let export_key = C::Kdf::expand(randomized_pwd, &envelope_info(nonce, b"ExportKey"), C::NH)?;
 
     // seed = Expand(randomized_pwd, concat(nonce, "PrivateKey"), Nseed)
-    let seed = Zeroizing::new(C::kdf_expand(
+    let seed = Zeroizing::new(C::Kdf::expand(
         randomized_pwd,
         &envelope_info(nonce, b"PrivateKey"),
         C::NSEED,
     )?);
 
     // (client_private_key, client_public_key) = DeriveAuthKeyPair(seed)
-    let (client_private_key, client_public_key) = C::derive_dh_keypair(&seed)?;
+    let (client_private_key, client_public_key) = C::Dh::derive_keypair(&seed)?;
 
     // Resolve identities
     let client_id = if client_identity.is_empty() {
@@ -155,7 +156,7 @@ pub fn recover<C: OpaqueCiphersuite>(
     mac_input.extend_from_slice(nonce);
     mac_input.extend_from_slice(&cleartext_creds);
 
-    C::mac_verify(&auth_key, &mac_input, &envelope.auth_tag)
+    C::Mac::verify(&auth_key, &mac_input, &envelope.auth_tag)
         .map_err(|_| OpaqueError::EnvelopeRecoveryError)?;
 
     Ok((client_private_key, client_public_key, export_key))
