@@ -965,3 +965,92 @@ mod argon2_tests {
         assert!(matches!(result, Err(OpaqueError::EnvelopeRecoveryError)));
     }
 }
+
+// ==========================================================================
+// Fake KE2 size consistency (user enumeration resistance)
+// ==========================================================================
+
+#[test]
+fn test_start_fake_ke2_size_matches_real() {
+    let mut rng = rand_core::OsRng;
+    let password = b"test password";
+
+    let setup = ServerSetup::<OpaqueRistretto255Sha512>::new(&mut rng).unwrap();
+
+    // Register
+    let (reg_request, reg_state) =
+        ClientRegistration::<OpaqueRistretto255Sha512>::start(password, &mut rng).unwrap();
+    let reg_response =
+        ServerRegistration::<OpaqueRistretto255Sha512>::start(&setup, &reg_request, b"user123")
+            .unwrap();
+    let (record, _) = reg_state.finish(&reg_response, b"", b"", &mut rng).unwrap();
+
+    // Client login start
+    let (ke1, _client_state) =
+        ClientLogin::<OpaqueRistretto255Sha512>::start(password, &mut rng).unwrap();
+
+    // Real KE2
+    let (real_ke2, _server_state) = ServerLogin::<OpaqueRistretto255Sha512>::start(
+        &setup,
+        &record,
+        &ke1,
+        b"user123",
+        b"test-context",
+        b"",
+        b"",
+        &mut rng,
+    )
+    .unwrap();
+
+    // Fake KE2 (non-existent user)
+    let fake_ke2 = ServerLogin::<OpaqueRistretto255Sha512>::start_fake(
+        &setup,
+        &ke1,
+        b"nonexistent_user",
+        b"test-context",
+        &mut rng,
+    )
+    .unwrap();
+
+    let real_serialized = real_ke2.serialize();
+    let fake_serialized = fake_ke2.serialize();
+
+    // Total serialized size must match (critical for user enumeration resistance)
+    assert_eq!(
+        real_serialized.len(),
+        fake_serialized.len(),
+        "Fake KE2 must be same total size as real KE2"
+    );
+
+    // Individual field sizes must match
+    assert_eq!(
+        real_ke2.evaluated_message.len(),
+        fake_ke2.evaluated_message.len(),
+        "evaluated_message size mismatch"
+    );
+    assert_eq!(
+        real_ke2.masking_nonce.len(),
+        fake_ke2.masking_nonce.len(),
+        "masking_nonce size mismatch"
+    );
+    assert_eq!(
+        real_ke2.masked_response.len(),
+        fake_ke2.masked_response.len(),
+        "masked_response size mismatch"
+    );
+    assert_eq!(
+        real_ke2.server_nonce.len(),
+        fake_ke2.server_nonce.len(),
+        "server_nonce size mismatch"
+    );
+    assert_eq!(
+        real_ke2.server_keyshare.len(),
+        fake_ke2.server_keyshare.len(),
+        "server_keyshare size mismatch"
+    );
+    assert_eq!(
+        real_ke2.server_mac.len(),
+        fake_ke2.server_mac.len(),
+        "server_mac size mismatch"
+    );
+}

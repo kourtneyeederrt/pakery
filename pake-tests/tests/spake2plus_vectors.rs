@@ -361,6 +361,48 @@ fn test_empty_context_and_identities() {
     );
 }
 
+// --- Empty password round-trip ---
+
+#[test]
+fn test_empty_password_round_trip() {
+    let (w0, w1) = password_to_scalars(b"");
+    let l_bytes = compute_verifier::<Spake2PlusRistretto255Sha512>(&w1);
+
+    let context = b"SPAKE2+ empty password test";
+    let id_prover = b"client";
+    let id_verifier = b"server";
+
+    let mut rng = rand_core::OsRng;
+
+    let (share_p_bytes, prover_state) =
+        P::start(&w0, &w1, context, id_prover, id_verifier, &mut rng).unwrap();
+
+    let (share_v_bytes, confirm_v, verifier_state) = V::start(
+        &share_p_bytes,
+        &w0,
+        &l_bytes,
+        context,
+        id_prover,
+        id_verifier,
+        &mut rng,
+    )
+    .unwrap();
+
+    let prover_output = prover_state
+        .finish(&share_v_bytes, &confirm_v)
+        .expect("Prover should accept Verifier's confirmation with empty password");
+
+    let verifier_output = verifier_state
+        .finish(&prover_output.confirm_p)
+        .expect("Verifier should accept Prover's confirmation with empty password");
+
+    assert_eq!(
+        prover_output.session_key.as_bytes(),
+        verifier_output.session_key.as_bytes(),
+        "Empty password must produce matching session keys"
+    );
+}
+
 // --- Verifier-first confirmation order ---
 
 #[test]

@@ -8,18 +8,14 @@ use crate::oprf::{self, OprfClientState};
 use crate::server_setup::ServerSetup;
 use crate::OpaqueError;
 use rand_core::CryptoRngCore;
-use zeroize::{Zeroize, Zeroizing};
+use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
 
 /// Client-side registration state held between start and finish.
+#[derive(Zeroize, ZeroizeOnDrop)]
 pub struct ClientRegistrationState<C: OpaqueCiphersuite> {
+    #[zeroize(skip)]
     oprf_state: OprfClientState<C>,
     password: Vec<u8>,
-}
-
-impl<C: OpaqueCiphersuite> Drop for ClientRegistrationState<C> {
-    fn drop(&mut self) {
-        self.password.zeroize();
-    }
 }
 
 /// Client-side registration operations.

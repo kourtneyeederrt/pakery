@@ -256,6 +256,60 @@ fn test_le64_encoding_in_transcript() {
     assert_eq!(tt[8], b'A');
 }
 
+// --- Empty password ---
+
+#[test]
+fn test_empty_password_round_trip() {
+    let w = password_to_scalar(b"");
+    let identity_a = b"alice";
+    let identity_b = b"bob";
+    let aad = b"";
+
+    let mut rng = rand_core::OsRng;
+
+    let (pa_bytes, state_a) = A::start(&w, identity_a, identity_b, aad, &mut rng).unwrap();
+    let (pb_bytes, state_b) = B::start(&w, identity_a, identity_b, aad, &mut rng).unwrap();
+
+    let output_a = state_a.finish(&pb_bytes).unwrap();
+    let output_b = state_b.finish(&pa_bytes).unwrap();
+
+    assert_eq!(
+        output_a.session_key.as_bytes(),
+        output_b.session_key.as_bytes(),
+        "Empty password must produce matching session keys"
+    );
+
+    output_a
+        .verify_peer_confirmation(&output_b.confirmation_mac)
+        .expect("A should accept B's confirmation with empty password");
+    output_b
+        .verify_peer_confirmation(&output_a.confirmation_mac)
+        .expect("B should accept A's confirmation with empty password");
+}
+
+// --- Identity point encoding as received share ---
+
+#[test]
+fn test_identity_encoding_as_received_share() {
+    let w = password_to_scalar(b"password");
+    let identity_a = b"alice";
+    let identity_b = b"bob";
+    let aad = b"";
+
+    let mut rng = rand_core::OsRng;
+
+    // Send all-zeros (Ristretto identity encoding) as pB to Party A
+    let (_, state_a) = A::start(&w, identity_a, identity_b, aad, &mut rng).unwrap();
+    let identity_bytes = [0u8; 32];
+    // K = x * (identity - w*N) = x * (-w*N) which is not identity for non-zero w,x
+    // This should not panic — the protocol either succeeds or returns an error gracefully
+    let _result_a = state_a.finish(&identity_bytes);
+
+    // Send all-zeros as pA to Party B
+    let (_, state_b) = B::start(&w, identity_a, identity_b, aad, &mut rng).unwrap();
+    let _result_b = state_b.finish(&identity_bytes);
+}
+
 // --- Empty identities ---
 
 #[test]

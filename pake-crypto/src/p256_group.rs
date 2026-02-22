@@ -48,7 +48,7 @@ impl CpaceGroup for P256Group {
             return Err(PakeError::InvalidPoint);
         }
         Ok(Self {
-            point: affine.unwrap().into(),
+            point: affine.expect("validated by is_none check above").into(),
         })
     }
 
@@ -118,5 +118,5 @@ fn r_constant() -> Scalar {
         0x00, 0x43, 0x19, 0x05, 0x52, 0x58, 0xE8, 0x61, 0x7B, 0x0C, 0x46, 0x35, 0x3D, 0x03, 0x9C,
         0xDA, 0xAF,
     ]))
-    .unwrap()
+    .expect("R constant is a valid P-256 scalar")
 }

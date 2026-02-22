@@ -7,6 +7,7 @@ use pake_core::crypto::dh::DhGroup;
 use pake_core::crypto::group::CpaceGroup;
 use pake_core::PakeError;
 use rand_core::CryptoRngCore;
+use zeroize::Zeroize;
 
 /// Ristretto255 group element for CPace.
 #[derive(Clone, PartialEq)]
@@ -137,7 +138,9 @@ impl DhGroup for Ristretto255Dh {
     fn generate_keypair(rng: &mut impl CryptoRngCore) -> Result<(Vec<u8>, Vec<u8>), PakeError> {
         let mut seed = [0u8; 32];
         rng.fill_bytes(&mut seed);
-        Self::derive_keypair(&seed)
+        let result = Self::derive_keypair(&seed);
+        seed.zeroize();
+        result
     }
 
     fn public_key_from_private(sk: &[u8]) -> Result<Vec<u8>, PakeError> {

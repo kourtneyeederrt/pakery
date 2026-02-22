@@ -282,6 +282,76 @@ fn test_session_id_output_oc() {
     assert_eq!(sid_out, expected, "sid_output_oc must match test vector");
 }
 
+// --- Generator is never identity ---
+
+#[test]
+fn test_generator_is_not_identity() {
+    use pake_core::crypto::CpaceGroup;
+
+    let ci = h(CI_HEX);
+    let sid = h(SID_HEX);
+
+    let test_inputs: &[&[u8]] = &[
+        b"",                          // empty password
+        b"Password",                  // normal password
+        b"\x00\x00\x00",             // null bytes
+        &[0x41; 1024],                // long input
+    ];
+
+    for (i, password) in test_inputs.iter().enumerate() {
+        let g = calculate_generator::<CpaceRistretto255Sha512>(password, &ci, &sid).unwrap();
+        assert!(
+            !g.is_identity(),
+            "Generator must not be identity for test input {}",
+            i
+        );
+    }
+}
+
+// --- Empty password round-trip ---
+
+#[test]
+fn test_empty_password_round_trip() {
+    let ci = h(CI_HEX);
+    let sid = h(SID_HEX);
+    let ad_a = b"";
+    let ad_b = b"";
+
+    let mut rng_a = rand_core::OsRng;
+    let mut rng_b = rand_core::OsRng;
+
+    let (ya_bytes, state) =
+        CpaceInitiator::<CpaceRistretto255Sha512>::start(b"", &ci, &sid, ad_a, &mut rng_a)
+            .unwrap();
+
+    let (yb_bytes, resp_output) = CpaceResponder::<CpaceRistretto255Sha512>::respond(
+        &ya_bytes,
+        b"",
+        &ci,
+        &sid,
+        ad_a,
+        ad_b,
+        CpaceMode::InitiatorResponder,
+        &mut rng_b,
+    )
+    .unwrap();
+
+    let init_output = state
+        .finish(&yb_bytes, ad_b, CpaceMode::InitiatorResponder)
+        .unwrap();
+
+    assert_eq!(
+        init_output.isk.as_bytes(),
+        resp_output.isk.as_bytes(),
+        "Empty password must produce matching ISKs"
+    );
+
+    assert_eq!(
+        init_output.session_id, resp_output.session_id,
+        "Session IDs must match with empty password"
+    );
+}
+
 // --- Invalid point tests ---
 
 #[test]

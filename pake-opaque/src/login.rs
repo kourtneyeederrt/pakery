@@ -42,7 +42,7 @@ impl<C: OpaqueCiphersuite> ClientLogin<C> {
         let mut client_nonce = vec![0u8; C::NN];
         rng.fill_bytes(&mut client_nonce);
 
-        let mut client_eph_seed = vec![0u8; C::NSEED];
+        let mut client_eph_seed = Zeroizing::new(vec![0u8; C::NSEED]);
         rng.fill_bytes(&mut client_eph_seed);
         let (client_eph_sk, client_eph_pk) = C::Dh::derive_keypair(&client_eph_seed)?;
 
@@ -201,16 +201,10 @@ impl<C: OpaqueCiphersuite> ClientLoginState<C> {
 }
 
 /// Server-side login state held between start and finish.
+#[derive(Zeroize, ZeroizeOnDrop)]
 pub struct ServerLoginState {
     expected_client_mac: Vec<u8>,
     session_key: Vec<u8>,
-}
-
-impl Drop for ServerLoginState {
-    fn drop(&mut self) {
-        self.expected_client_mac.zeroize();
-        self.session_key.zeroize();
-    }
 }
 
 /// Server-side login operations.
@@ -234,7 +228,7 @@ impl<C: OpaqueCiphersuite> ServerLogin<C> {
         let mut server_nonce = vec![0u8; C::NN];
         rng.fill_bytes(&mut server_nonce);
 
-        let mut server_eph_seed = vec![0u8; C::NSEED];
+        let mut server_eph_seed = Zeroizing::new(vec![0u8; C::NSEED]);
         rng.fill_bytes(&mut server_eph_seed);
 
         let mut masking_nonce = vec![0u8; C::NN];
@@ -313,7 +307,7 @@ impl<C: OpaqueCiphersuite> ServerLogin<C> {
         // 4. Server ephemeral keypair
         let mut server_nonce = vec![0u8; C::NN];
         rng.fill_bytes(&mut server_nonce);
-        let mut server_eph_seed = vec![0u8; C::NSEED];
+        let mut server_eph_seed = Zeroizing::new(vec![0u8; C::NSEED]);
         rng.fill_bytes(&mut server_eph_seed);
         let (server_eph_sk_raw, server_eph_pk) = C::Dh::derive_keypair(&server_eph_seed)?;
         let server_eph_sk = Zeroizing::new(server_eph_sk_raw);
