@@ -14,7 +14,7 @@ p256 = ["dep:p256", "dep:sha2", "dep:hkdf", "dep:hmac"]
 argon2 = ["dep:argon2"]
 
 [dependencies]
-pake-core = { path = "../pake-core", default-features = false, features = ["alloc"] }
+pake-core = { path = "../pake-core", default-features = false }
 rand_core = { workspace = true }
 subtle = { workspace = true }
 zeroize = { workspace = true }

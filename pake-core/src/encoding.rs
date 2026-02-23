@@ -2,7 +2,6 @@
 //!
 //! These implement the encoding functions specified in draft-irtf-cfrg-cpace.
 
-#[cfg(feature = "alloc")]
 use alloc::vec::Vec;
 
 /// Encode a `usize` value using unsigned LEB128 encoding.

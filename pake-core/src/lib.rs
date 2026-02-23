@@ -7,7 +7,6 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
-#[cfg(feature = "alloc")]
 extern crate alloc;
 
 pub mod crypto;

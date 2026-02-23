@@ -1,6 +1,5 @@
 //! Zeroizing shared secret type.
 
-#[cfg(feature = "alloc")]
 use alloc::vec::Vec;
 use subtle::ConstantTimeEq;
 use zeroize::{Zeroize, ZeroizeOnDrop};

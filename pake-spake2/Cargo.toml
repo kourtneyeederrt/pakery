@@ -9,12 +9,11 @@ description = "SPAKE2 balanced PAKE protocol (RFC 9382)"
 
 [features]
 default = ["std"]
-std = ["alloc", "pake-core/std"]
-alloc = ["pake-core/alloc"]
+std = ["pake-core/std"]
 test-utils = []
 
 [dependencies]
-pake-core = { path = "../pake-core", default-features = false, features = ["alloc"] }
+pake-core = { path = "../pake-core", default-features = false }
 rand_core = { workspace = true }
 zeroize = { workspace = true }
 subtle = { workspace = true }
