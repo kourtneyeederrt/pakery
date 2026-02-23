@@ -11,6 +11,8 @@ pub struct Sha256Hash {
 }
 
 impl Hash for Sha256Hash {
+    const OUTPUT_SIZE: usize = 32;
+
     fn new() -> Self {
         Self {
             inner: sha2::Sha256::new(),

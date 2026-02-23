@@ -4,6 +4,9 @@ use alloc::vec::Vec;
 
 /// A cryptographic hash function.
 pub trait Hash: Sized + Clone {
+    /// Output size in bytes (e.g. 32 for SHA-256, 64 for SHA-512).
+    const OUTPUT_SIZE: usize;
+
     /// Create a new hasher.
     fn new() -> Self;
 

@@ -43,6 +43,7 @@ pub fn calculate_generator<C: CpaceCiphersuite>(
     ci: &[u8],
     sid: &[u8],
 ) -> Result<C::Group, pake_core::PakeError> {
+    const { assert!(<C::Hash as pake_core::crypto::Hash>::OUTPUT_SIZE >= 2 * C::FIELD_SIZE_BYTES) };
     let gen_str = generator_string::<C>(password, ci, sid);
     let hash_output = C::Hash::digest(&gen_str);
     C::Group::from_uniform_bytes(&hash_output)

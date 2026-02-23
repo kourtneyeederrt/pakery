@@ -138,6 +138,10 @@ impl<C: OpaqueCiphersuite> ClientLoginState<C> {
         pad_info.extend_from_slice(b"CredentialResponsePad");
         let pad = Zeroizing::new(C::Kdf::expand(&masking_key, &pad_info, cred_resp_size)?);
 
+        if ke2.masked_response.len() != cred_resp_size {
+            return Err(OpaqueError::DeserializationError);
+        }
+
         let mut cred_resp_bytes = Zeroizing::new(vec![0u8; cred_resp_size]);
         for i in 0..cred_resp_size {
             cred_resp_bytes[i] = ke2.masked_response[i] ^ pad[i];
@@ -168,14 +172,14 @@ impl<C: OpaqueCiphersuite> ClientLoginState<C> {
         };
 
         // 5. TripleDH
-        let ikm = Zeroizing::new(triple_dh_ikm::<C>(
+        let ikm = triple_dh_ikm::<C>(
             &self.client_eph_sk,
             &ke2.server_keyshare,
             &self.client_eph_sk,
             &cred_resp.server_public_key,
             &client_private_key,
             &ke2.server_keyshare,
-        )?);
+        )?;
 
         // 6. Build preamble and derive keys
         let inner_ke2 = ke2.inner_ke2();
@@ -354,14 +358,14 @@ impl<C: OpaqueCiphersuite> ServerLogin<C> {
         };
 
         // 7. TripleDH from server perspective (using fake client key for dh3)
-        let ikm = Zeroizing::new(triple_dh_ikm::<C>(
+        let ikm = triple_dh_ikm::<C>(
             &server_eph_sk,
             &ke1.client_keyshare,
             setup.private_key(),
             &ke1.client_keyshare,
             &server_eph_sk,
             &fake_client_pk,
-        )?);
+        )?;
 
         // 8. Build preamble and derive keys
         let inner_ke2_msg = KE2 {
@@ -457,14 +461,14 @@ impl<C: OpaqueCiphersuite> ServerLogin<C> {
         };
 
         // 6. TripleDH from server perspective
-        let ikm = Zeroizing::new(triple_dh_ikm::<C>(
+        let ikm = triple_dh_ikm::<C>(
             &server_eph_sk,
             &ke1.client_keyshare,
             setup.private_key(),
             &ke1.client_keyshare,
             &server_eph_sk,
             &record.client_public_key,
-        )?);
+        )?;
 
         // 7. Build preamble (without server_mac — that's what inner_ke2 is)
         let inner_ke2_msg = KE2 {

@@ -11,6 +11,8 @@ pub struct Sha512Hash {
 }
 
 impl Hash for Sha512Hash {
+    const OUTPUT_SIZE: usize = 64;
+
     fn new() -> Self {
         Self {
             inner: sha2::Sha512::new(),

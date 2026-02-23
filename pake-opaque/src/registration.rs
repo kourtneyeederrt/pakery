@@ -88,6 +88,12 @@ impl<C: OpaqueCiphersuite> ClientRegistrationState<C> {
     }
 
     /// Finish registration with a pre-determined nonce (for test vectors).
+    ///
+    /// # Security
+    ///
+    /// Using a non-random nonce completely breaks envelope confidentiality.
+    /// This method is gated behind the `test-utils` feature.
+    #[cfg(feature = "test-utils")]
     pub fn finish_with_nonce(
         self,
         response: &RegistrationResponse,

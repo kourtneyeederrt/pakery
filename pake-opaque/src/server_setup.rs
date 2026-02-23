@@ -36,6 +36,12 @@ impl<C: OpaqueCiphersuite> ServerSetup<C> {
     }
 
     /// Create a server setup with pre-determined values (for testing).
+    ///
+    /// # Security
+    ///
+    /// Allows construction with arbitrary (potentially weak) keys.
+    /// This method is gated behind the `test-utils` feature.
+    #[cfg(feature = "test-utils")]
     pub fn new_with_key(
         oprf_seed: Vec<u8>,
         server_private_key: Vec<u8>,

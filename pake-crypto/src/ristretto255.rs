@@ -85,6 +85,11 @@ impl CpaceGroup for Ristretto255Group {
 }
 
 /// Ristretto255 Diffie-Hellman group (byte-level operations).
+///
+/// **Note:** [`derive_keypair`](DhGroup::derive_keypair) uses the
+/// `"OPAQUE-DeriveDiffieHellmanKeyPair"` info label, making this
+/// implementation OPAQUE-specific. Using it outside OPAQUE will produce
+/// keys scoped to the OPAQUE domain separator.
 pub struct Ristretto255Dh;
 
 impl DhGroup for Ristretto255Dh {

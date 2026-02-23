@@ -174,12 +174,12 @@ pub fn triple_dh_ikm<C: OpaqueCiphersuite>(
     dh2_pk: &[u8],
     dh3_sk: &[u8],
     dh3_pk: &[u8],
-) -> Result<Vec<u8>, OpaqueError> {
+) -> Result<Zeroizing<Vec<u8>>, OpaqueError> {
     let dh1 = Zeroizing::new(C::Dh::diffie_hellman(dh1_sk, dh1_pk)?);
     let dh2 = Zeroizing::new(C::Dh::diffie_hellman(dh2_sk, dh2_pk)?);
     let dh3 = Zeroizing::new(C::Dh::diffie_hellman(dh3_sk, dh3_pk)?);
 
-    let mut ikm = Vec::with_capacity(dh1.len() + dh2.len() + dh3.len());
+    let mut ikm = Zeroizing::new(Vec::with_capacity(dh1.len() + dh2.len() + dh3.len()));
     ikm.extend_from_slice(&dh1);
     ikm.extend_from_slice(&dh2);
     ikm.extend_from_slice(&dh3);

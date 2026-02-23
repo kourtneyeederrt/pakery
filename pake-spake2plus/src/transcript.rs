@@ -40,10 +40,8 @@ pub(crate) fn derive_key_schedule<C: Spake2PlusCiphersuite>(
     share_v: &[u8],
 ) -> Result<KeySchedule, Spake2PlusError> {
     // Step 1: K_main = Hash(TT)
+    const { assert!(<C::Hash as pake_core::crypto::Hash>::OUTPUT_SIZE >= C::NH) };
     let k_main = Zeroizing::new(C::Hash::digest(tt));
-    if k_main.len() < C::NH {
-        return Err(Spake2PlusError::InternalError("hash output too short"));
-    }
 
     // Step 2: PRK = KDF.extract(salt=[], ikm=K_main)
     let prk = Zeroizing::new(C::Kdf::extract(&[], &k_main[..C::NH]));

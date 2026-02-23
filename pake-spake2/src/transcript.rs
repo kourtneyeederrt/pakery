@@ -48,11 +48,9 @@ pub fn derive_key_schedule<C: Spake2Ciphersuite>(
     is_party_a: bool,
 ) -> Result<Spake2Output, Spake2Error> {
     // Step 1: Hash(TT) → Ke || Ka
+    const { assert!(<C::Hash as pake_core::crypto::Hash>::OUTPUT_SIZE >= C::NH) };
     let hash_tt = C::Hash::digest(tt);
     let half = C::NH / 2;
-    if hash_tt.len() < C::NH {
-        return Err(Spake2Error::InternalError("hash output too short"));
-    }
     let ke = &hash_tt[..half];
     let ka = &hash_tt[half..C::NH];
 
