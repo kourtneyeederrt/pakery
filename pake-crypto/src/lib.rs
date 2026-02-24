@@ -19,12 +19,17 @@ pub mod mac;
 
 #[cfg(feature = "argon2")]
 pub mod ksf;
+#[cfg(any(feature = "ristretto255", feature = "p256"))]
+pub(crate) mod oprf_common;
 #[cfg(feature = "ristretto255")]
 pub mod oprf_ristretto;
 #[cfg(feature = "ristretto255")]
 pub mod ristretto255;
 #[cfg(feature = "ristretto255")]
 pub mod spake2_constants;
+
+#[cfg(feature = "p256")]
+pub mod oprf_p256;
 
 // P-256 modules
 #[cfg(feature = "p256")]
@@ -64,5 +69,7 @@ pub use kdf_sha256::HkdfSha256;
 pub use mac_sha256::HmacSha256;
 #[cfg(feature = "p256")]
 pub use p256_group::P256Group;
+#[cfg(feature = "p256")]
+pub use oprf_p256::P256Oprf;
 #[cfg(feature = "p256")]
 pub use spake2_constants_p256::{SPAKE2_P256_M_COMPRESSED, SPAKE2_P256_N_COMPRESSED};

@@ -6,18 +6,12 @@ use crate::ciphersuite::OpaqueCiphersuite;
 use crate::OpaqueError;
 use pake_core::crypto::{Kdf, Oprf as OprfTrait, OprfClientState as OprfClientStateTrait};
 use rand_core::CryptoRngCore;
-use zeroize::Zeroizing;
+use zeroize::{Zeroize, Zeroizing};
 
 /// State held by the client between blind and finalize.
 ///
-/// # Zeroization caveat
-///
-/// The inner OPRF state (from the `voprf` crate) does not implement `Zeroize`,
-/// so the OPRF blinding scalar is **not** explicitly zeroed when this type is
-/// dropped.  The blind alone does not reveal the password (an attacker also
-/// needs the OPRF evaluation response), and the exposure window is limited to
-/// the lifetime of the login flow, but callers with strict memory-hygiene
-/// requirements should be aware of this limitation.
+/// The inner OPRF blinding scalar is zeroed on drop.
+#[derive(Zeroize)]
 pub struct OprfClientState<C: OpaqueCiphersuite> {
     pub(crate) state: <C::Oprf as OprfTrait>::ClientState,
 }

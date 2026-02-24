@@ -96,8 +96,10 @@ impl CpaceGroup for P256Group {
         // Interpret 64 bytes as big-endian 512-bit integer, reduce mod group order n.
         // Split into high (first 32 bytes) and low (last 32 bytes).
         // result = reduce(high) * R + reduce(low), where R = 2^256 mod n.
-        let high_fb = p256::FieldBytes::clone_from_slice(&bytes[..32]);
-        let low_fb = p256::FieldBytes::clone_from_slice(&bytes[32..]);
+        let high_arr: [u8; 32] = bytes[..32].try_into().expect("first 32 bytes");
+        let high_fb = p256::FieldBytes::from(high_arr);
+        let low_arr: [u8; 32] = bytes[32..].try_into().expect("last 32 bytes");
+        let low_fb = p256::FieldBytes::from(low_arr);
 
         let high = <Scalar as Reduce<p256::U256>>::reduce_bytes(&high_fb);
         let low = <Scalar as Reduce<p256::U256>>::reduce_bytes(&low_fb);

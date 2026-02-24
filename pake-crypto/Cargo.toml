@@ -11,8 +11,8 @@ description = "Concrete cryptographic implementations for PAKE protocols"
 default = ["std", "ristretto255"]
 std = ["pake-core/std"]
 getrandom = ["rand_core/getrandom"]
-ristretto255 = ["dep:curve25519-dalek", "dep:sha2", "dep:hkdf", "dep:hmac", "dep:voprf"]
-p256 = ["dep:p256", "dep:sha2", "dep:hkdf", "dep:hmac"]
+ristretto255 = ["dep:curve25519-dalek", "dep:sha2", "dep:hkdf", "dep:hmac", "dep:digest"]
+p256 = ["dep:p256", "dep:sha2", "dep:hkdf", "dep:hmac", "dep:digest"]
 argon2 = ["dep:argon2"]
 
 [dependencies]
@@ -24,6 +24,6 @@ curve25519-dalek = { workspace = true, optional = true }
 sha2 = { workspace = true, optional = true }
 hkdf = { workspace = true, optional = true }
 hmac = { workspace = true, optional = true }
-voprf = { workspace = true, optional = true }
 p256 = { workspace = true, optional = true }
+digest = { workspace = true, optional = true }
 argon2 = { workspace = true, optional = true }

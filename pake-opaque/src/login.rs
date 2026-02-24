@@ -20,9 +20,6 @@ use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
 /// Client-side login state held between start and finish.
 #[derive(Zeroize, ZeroizeOnDrop)]
 pub struct ClientLoginState<C: OpaqueCiphersuite> {
-    // SECURITY: voprf::OprfClient does not implement Zeroize, so the OPRF
-    // blinding scalar is not explicitly zeroed on drop. See OprfClientState docs.
-    #[zeroize(skip)]
     oprf_state: OprfClientState<C>,
     password: Vec<u8>,
     client_eph_sk: Vec<u8>,

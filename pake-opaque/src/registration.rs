@@ -16,7 +16,6 @@ use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
 /// Client-side registration state held between start and finish.
 #[derive(Zeroize, ZeroizeOnDrop)]
 pub struct ClientRegistrationState<C: OpaqueCiphersuite> {
-    #[zeroize(skip)]
     oprf_state: OprfClientState<C>,
     password: Vec<u8>,
 }

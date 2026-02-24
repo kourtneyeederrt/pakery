@@ -3,9 +3,10 @@
 use crate::error::PakeError;
 use alloc::vec::Vec;
 use rand_core::CryptoRngCore;
+use zeroize::Zeroize;
 
 /// Client-side OPRF state held between blind and finalize.
-pub trait OprfClientState: Sized {
+pub trait OprfClientState: Sized + Zeroize {
     /// Finalize the OPRF output given the password and server's evaluation.
     fn finalize(&self, password: &[u8], evaluated_bytes: &[u8]) -> Result<Vec<u8>, PakeError>;
 }

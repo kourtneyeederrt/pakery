@@ -118,13 +118,11 @@ impl DhGroup for Ristretto255Dh {
     }
 
     fn derive_keypair(seed: &[u8]) -> Result<(Vec<u8>, Vec<u8>), PakeError> {
-        let server = voprf::OprfServer::<voprf::Ristretto255>::new_from_seed(
-            seed,
-            b"OPAQUE-DeriveDiffieHellmanKeyPair",
-        )
-        .map_err(|_| PakeError::ProtocolError("DeriveKeyPair failed"))?;
+        use crate::oprf_ristretto::Ristretto255Oprf;
+        use pake_core::crypto::oprf::Oprf;
 
-        let sk_bytes = server.serialize().to_vec();
+        let sk_bytes =
+            Ristretto255Oprf::derive_key(seed, b"OPAQUE-DeriveDiffieHellmanKeyPair")?;
         let sk_arr: [u8; 32] = sk_bytes
             .as_slice()
             .try_into()
