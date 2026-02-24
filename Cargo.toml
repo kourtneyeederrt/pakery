@@ -1,13 +1,14 @@
 [workspace]
 resolver = "2"
-members = ["pake-core", "pake-cpace", "pake-crypto", "pake-opaque", "pake-spake2", "pake-spake2plus", "pake-tests"]
+members = ["pakery-core", "pakery-cpace", "pakery-crypto", "pakery-opaque", "pakery-spake2", "pakery-spake2plus", "pakery-tests"]
 
 [workspace.package]
 version = "0.1.0"
 edition = "2021"
 rust-version = "1.79"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/user/pake"
+repository = "https://github.com/djx-y-z/pakery"
+authors = ["pakery contributors"]
 
 [workspace.dependencies]
 group = "0.13"

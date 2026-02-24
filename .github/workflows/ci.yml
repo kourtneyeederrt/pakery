@@ -1,0 +1,123 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check:
+    name: Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo check --workspace --all-features
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo test --workspace
+      - run: cargo test --workspace --all-features
+
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+
+  fmt:
+    name: Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - run: cargo fmt --all -- --check
+
+  doc:
+    name: Documentation
+    runs-on: ubuntu-latest
+    env:
+      RUSTDOCFLAGS: -Dwarnings
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo doc --workspace --all-features --no-deps
+
+  msrv:
+    name: MSRV (1.79)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.79"
+      - run: cargo check --workspace
+
+  no-std:
+    name: no_std
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: thumbv7em-none-eabihf
+      - run: cargo check -p pakery-core --target thumbv7em-none-eabihf --no-default-features
+      - run: cargo check -p pakery-cpace --target thumbv7em-none-eabihf --no-default-features
+      - run: cargo check -p pakery-opaque --target thumbv7em-none-eabihf --no-default-features
+      - run: cargo check -p pakery-spake2 --target thumbv7em-none-eabihf --no-default-features
+      - run: cargo check -p pakery-spake2plus --target thumbv7em-none-eabihf --no-default-features
+
+  wasm:
+    name: WASM
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - run: cargo check -p pakery-core --target wasm32-unknown-unknown
+      - run: cargo check -p pakery-cpace --target wasm32-unknown-unknown
+      - run: cargo check -p pakery-opaque --target wasm32-unknown-unknown
+      - run: cargo check -p pakery-spake2 --target wasm32-unknown-unknown
+      - run: cargo check -p pakery-spake2plus --target wasm32-unknown-unknown
+      - run: cargo check -p pakery-crypto --target wasm32-unknown-unknown
+
+  feature-combinations:
+    name: Feature combinations
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        features:
+          - ristretto255
+          - p256
+          - argon2,ristretto255
+          - ristretto255,p256
+          - ristretto255,p256,argon2
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo check -p pakery-crypto --no-default-features --features ${{ matrix.features }}
+
+  minimal-versions:
+    name: Minimal versions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo +nightly update -Z minimal-versions
+      - run: cargo +stable check --workspace --all-features

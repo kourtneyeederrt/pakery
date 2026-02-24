@@ -1,0 +1,34 @@
+[package]
+name = "pakery-crypto"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+description = "Concrete cryptographic implementations for PAKE protocols"
+readme = "README.md"
+documentation = "https://docs.rs/pakery-crypto"
+keywords = ["pake", "ristretto255", "p256", "cryptography", "no-std"]
+categories = ["cryptography", "no-std::no-alloc"]
+
+[features]
+default = ["std", "ristretto255"]
+std = ["pakery-core/std"]
+getrandom = ["rand_core/getrandom"]
+ristretto255 = ["dep:curve25519-dalek", "dep:sha2", "dep:hkdf", "dep:hmac", "dep:digest"]
+p256 = ["dep:p256", "dep:sha2", "dep:hkdf", "dep:hmac", "dep:digest"]
+argon2 = ["dep:argon2"]
+
+[dependencies]
+pakery-core = { version = "0.1.0", path = "../pakery-core", default-features = false }
+rand_core = { workspace = true }
+subtle = { workspace = true }
+zeroize = { workspace = true }
+curve25519-dalek = { workspace = true, optional = true }
+sha2 = { workspace = true, optional = true }
+hkdf = { workspace = true, optional = true }
+hmac = { workspace = true, optional = true }
+p256 = { workspace = true, optional = true }
+digest = { workspace = true, optional = true }
+argon2 = { workspace = true, optional = true }

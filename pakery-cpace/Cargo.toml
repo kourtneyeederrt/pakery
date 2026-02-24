@@ -1,0 +1,24 @@
+[package]
+name = "pakery-cpace"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+description = "CPace balanced PAKE protocol (draft-irtf-cfrg-cpace)"
+readme = "README.md"
+documentation = "https://docs.rs/pakery-cpace"
+keywords = ["pake", "cpace", "password", "key-exchange", "no-std"]
+categories = ["cryptography", "no-std::no-alloc", "authentication"]
+
+[features]
+default = ["std"]
+std = ["pakery-core/std"]
+getrandom = ["rand_core/getrandom"]
+
+[dependencies]
+pakery-core = { version = "0.1.0", path = "../pakery-core", default-features = false }
+rand_core = { workspace = true }
+zeroize = { workspace = true }
+subtle = { workspace = true }
