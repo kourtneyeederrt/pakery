@@ -6,7 +6,13 @@ Thank you for considering contributing to pakery!
 
 1. Fork the repository and clone it locally
 2. Install Rust 1.79+ via [rustup](https://rustup.rs/)
-3. Run the test suite to make sure everything works:
+3. Enable the pre-commit hook:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+4. Run the test suite to make sure everything works:
 
 ```bash
 cargo test --workspace --all-features
