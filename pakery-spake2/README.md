@@ -2,7 +2,7 @@
 
 [![crates.io](https://img.shields.io/crates/v/pakery-spake2.svg)](https://crates.io/crates/pakery-spake2)
 [![docs.rs](https://docs.rs/pakery-spake2/badge.svg)](https://docs.rs/pakery-spake2)
-[![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](../LICENSE-MIT)
+[![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](LICENSE-MIT)
 
 SPAKE2 balanced PAKE protocol implementation ([RFC 9382](https://www.rfc-editor.org/rfc/rfc9382)).
 
@@ -85,4 +85,4 @@ The minimum supported Rust version is **1.79**.
 
 ## License
 
-Licensed under either of [Apache License, Version 2.0](../LICENSE-APACHE) or [MIT License](../LICENSE-MIT) at your option.
+Licensed under either of [Apache License, Version 2.0](LICENSE-APACHE) or [MIT License](LICENSE-MIT) at your option.

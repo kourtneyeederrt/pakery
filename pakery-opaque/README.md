@@ -2,7 +2,7 @@
 
 [![crates.io](https://img.shields.io/crates/v/pakery-opaque.svg)](https://crates.io/crates/pakery-opaque)
 [![docs.rs](https://docs.rs/pakery-opaque/badge.svg)](https://docs.rs/pakery-opaque)
-[![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](../LICENSE-MIT)
+[![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](LICENSE-MIT)
 
 OPAQUE augmented PAKE protocol implementation ([RFC 9807](https://www.rfc-editor.org/rfc/rfc9807)).
 
@@ -98,4 +98,4 @@ The minimum supported Rust version is **1.79**.
 
 ## License
 
-Licensed under either of [Apache License, Version 2.0](../LICENSE-APACHE) or [MIT License](../LICENSE-MIT) at your option.
+Licensed under either of [Apache License, Version 2.0](LICENSE-APACHE) or [MIT License](LICENSE-MIT) at your option.

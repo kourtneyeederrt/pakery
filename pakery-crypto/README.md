@@ -2,7 +2,7 @@
 
 [![crates.io](https://img.shields.io/crates/v/pakery-crypto.svg)](https://crates.io/crates/pakery-crypto)
 [![docs.rs](https://docs.rs/pakery-crypto/badge.svg)](https://docs.rs/pakery-crypto)
-[![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](../LICENSE-MIT)
+[![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](LICENSE-MIT)
 
 Concrete cryptographic implementations for the [`pakery`](https://github.com/djx-y-z/pakery) PAKE workspace.
 
@@ -87,4 +87,4 @@ The minimum supported Rust version is **1.79**.
 
 ## License
 
-Licensed under either of [Apache License, Version 2.0](../LICENSE-APACHE) or [MIT License](../LICENSE-MIT) at your option.
+Licensed under either of [Apache License, Version 2.0](LICENSE-APACHE) or [MIT License](LICENSE-MIT) at your option.

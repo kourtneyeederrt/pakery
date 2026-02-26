@@ -19,7 +19,7 @@ getrandom = ["rand_core/getrandom"]
 test-utils = []
 
 [dependencies]
-pakery-core = { version = "0.1.0", path = "../pakery-core", default-features = false }
+pakery-core = { workspace = true }
 rand_core = { workspace = true }
 zeroize = { workspace = true }
 subtle = { workspace = true }

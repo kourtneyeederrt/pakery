@@ -14,12 +14,12 @@ p256 = ["pakery-crypto/p256", "dep:p256"]
 argon2 = ["pakery-crypto/argon2"]
 
 [dependencies]
-pakery-core = { version = "0.1.0", path = "../pakery-core" }
-pakery-cpace = { version = "0.1.0", path = "../pakery-cpace" }
-pakery-opaque = { version = "0.1.0", path = "../pakery-opaque", features = ["test-utils"] }
-pakery-spake2 = { version = "0.1.0", path = "../pakery-spake2", features = ["test-utils"] }
-pakery-spake2plus = { version = "0.1.0", path = "../pakery-spake2plus", features = ["test-utils"] }
-pakery-crypto = { version = "0.1.0", path = "../pakery-crypto" }
+pakery-core = { workspace = true, default-features = true }
+pakery-cpace = { workspace = true }
+pakery-opaque = { workspace = true, features = ["test-utils"] }
+pakery-spake2 = { workspace = true, features = ["test-utils"] }
+pakery-spake2plus = { workspace = true, features = ["test-utils"] }
+pakery-crypto = { workspace = true }
 hex = "0.4"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

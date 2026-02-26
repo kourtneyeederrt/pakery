@@ -21,7 +21,7 @@ p256 = ["dep:p256", "dep:sha2", "dep:hkdf", "dep:hmac", "dep:digest"]
 argon2 = ["dep:argon2"]
 
 [dependencies]
-pakery-core = { version = "0.1.0", path = "../pakery-core", default-features = false }
+pakery-core = { workspace = true }
 rand_core = { workspace = true }
 subtle = { workspace = true }
 zeroize = { workspace = true }

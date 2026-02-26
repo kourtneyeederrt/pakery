@@ -62,6 +62,26 @@ RUSTDOCFLAGS=-Dwarnings cargo doc --workspace --all-features --no-deps
 3. Ensure all CI checks pass locally (see above)
 4. Open a pull request against `main`
 
+## Releasing a new version
+
+This workspace uses **lockstep versioning** — all crates share a single version defined in the root `Cargo.toml`. When releasing, every crate is published with the same version number.
+
+### How to bump the version
+
+All version numbers are centralized in `Cargo.toml` at the workspace root:
+
+1. Update `[workspace.package] version` (the version of all crates)
+2. Update `[workspace.dependencies] pakery-core` version (the dependency version used by other crates)
+3. Update `[workspace.dependencies] pakery-*` versions for any other inter-crate dependencies
+4. Update `CHANGELOG.md` with the new version and changes
+5. Commit, tag with `v<version>`, and push — the publish workflow handles the rest
+
+### Publication order (handled by CI)
+
+1. `pakery-core` (no internal dependencies)
+2. `pakery-crypto` (depends on `pakery-core`)
+3. `pakery-cpace`, `pakery-opaque`, `pakery-spake2`, `pakery-spake2plus` (depend on `pakery-core`)
+
 ## Reporting security issues
 
 If you discover a security vulnerability, please **do not** open a public issue. Instead, report it privately via GitHub's [security advisory](https://github.com/djx-y-z/pakery/security/advisories/new) feature.

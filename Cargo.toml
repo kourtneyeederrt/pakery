@@ -11,6 +11,12 @@ repository = "https://github.com/djx-y-z/pakery"
 authors = ["pakery contributors"]
 
 [workspace.dependencies]
+pakery-core = { version = "0.1.0", path = "pakery-core", default-features = false }
+pakery-cpace = { version = "0.1.0", path = "pakery-cpace" }
+pakery-opaque = { version = "0.1.0", path = "pakery-opaque" }
+pakery-spake2 = { version = "0.1.0", path = "pakery-spake2" }
+pakery-spake2plus = { version = "0.1.0", path = "pakery-spake2plus" }
+pakery-crypto = { version = "0.1.0", path = "pakery-crypto" }
 group = "0.13"
 ff = "0.13"
 digest = "0.10"

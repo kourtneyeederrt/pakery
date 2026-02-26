@@ -2,7 +2,7 @@
 
 [![crates.io](https://img.shields.io/crates/v/pakery-cpace.svg)](https://crates.io/crates/pakery-cpace)
 [![docs.rs](https://docs.rs/pakery-cpace/badge.svg)](https://docs.rs/pakery-cpace)
-[![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](../LICENSE-MIT)
+[![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](LICENSE-MIT)
 
 CPace balanced PAKE protocol implementation ([draft-irtf-cfrg-cpace](https://datatracker.ietf.org/doc/draft-irtf-cfrg-cpace/)).
 
@@ -74,4 +74,4 @@ The minimum supported Rust version is **1.79**.
 
 ## License
 
-Licensed under either of [Apache License, Version 2.0](../LICENSE-APACHE) or [MIT License](../LICENSE-MIT) at your option.
+Licensed under either of [Apache License, Version 2.0](LICENSE-APACHE) or [MIT License](LICENSE-MIT) at your option.
