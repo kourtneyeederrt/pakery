@@ -19,6 +19,10 @@ getrandom = ["rand_core/getrandom"]
 ristretto255 = ["dep:curve25519-dalek", "dep:sha2", "dep:hkdf", "dep:hmac", "dep:digest"]
 p256 = ["dep:p256", "dep:sha2", "dep:hkdf", "dep:hmac", "dep:digest"]
 argon2 = ["dep:argon2"]
+cpace = ["dep:pakery-cpace"]
+spake2 = ["dep:pakery-spake2"]
+spake2plus = ["dep:pakery-spake2plus"]
+opaque = ["dep:pakery-opaque"]
 
 [dependencies]
 pakery-core = { workspace = true }
@@ -32,3 +36,7 @@ hmac = { workspace = true, optional = true }
 p256 = { workspace = true, optional = true }
 digest = { workspace = true, optional = true }
 argon2 = { workspace = true, optional = true }
+pakery-cpace = { workspace = true, optional = true }
+pakery-spake2 = { workspace = true, optional = true }
+pakery-spake2plus = { workspace = true, optional = true }
+pakery-opaque = { workspace = true, optional = true }

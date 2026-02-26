@@ -38,12 +38,12 @@ pub struct P256OprfClientState {
 }
 
 /// Serialize a `ProjectivePoint` as compressed SEC1 (33 bytes).
-fn point_to_bytes(point: &ProjectivePoint) -> Vec<u8> {
+pub(crate) fn point_to_bytes(point: &ProjectivePoint) -> Vec<u8> {
     point.to_affine().to_encoded_point(true).as_bytes().to_vec()
 }
 
 /// Deserialize a compressed SEC1 point.
-fn point_from_bytes(bytes: &[u8]) -> Result<ProjectivePoint, PakeError> {
+pub(crate) fn point_from_bytes(bytes: &[u8]) -> Result<ProjectivePoint, PakeError> {
     let encoded = EncodedPoint::from_bytes(bytes)
         .map_err(|_| PakeError::InvalidInput("invalid point encoding"))?;
     let affine = AffinePoint::from_encoded_point(&encoded);
@@ -54,7 +54,7 @@ fn point_from_bytes(bytes: &[u8]) -> Result<ProjectivePoint, PakeError> {
 }
 
 /// Deserialize a 32-byte big-endian scalar.
-fn scalar_from_bytes(bytes: &[u8]) -> Result<Scalar, PakeError> {
+pub(crate) fn scalar_from_bytes(bytes: &[u8]) -> Result<Scalar, PakeError> {
     let arr: [u8; 32] = bytes
         .try_into()
         .map_err(|_| PakeError::InvalidInput("invalid scalar length"))?;
