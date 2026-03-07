@@ -2,7 +2,7 @@
 
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](LICENSE-MIT)
 [![CI](https://github.com/djx-y-z/pakery/actions/workflows/ci.yml/badge.svg)](https://github.com/djx-y-z/pakery/actions/workflows/ci.yml)
-[![Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/djx-y-z/COVERAGE_GIST_ID/raw/coverage.json)](https://github.com/djx-y-z/pakery/actions/workflows/ci.yml)
+[![Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/djx-y-z/0e3981dfd44c61cc097a84daafd0eb2d/raw/coverage.json)](https://github.com/djx-y-z/pakery/actions/workflows/ci.yml)
 
 Modular, `no_std`-compatible Password-Authenticated Key Exchange (PAKE) implementations in Rust.
 
