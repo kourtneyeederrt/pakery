@@ -19,5 +19,6 @@ getrandom = ["rand_core/getrandom"]
 
 [dependencies]
 zeroize = { workspace = true }
+zeroize_derive = { workspace = true }
 subtle = { workspace = true }
 rand_core = { workspace = true }
